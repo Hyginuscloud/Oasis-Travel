@@ -1,0 +1,6 @@
+{
+  "name": "Oasis Travel and Tourism Consultancy Dubai",
+  "description": "International travel, Dubai tourism, UAE visa guidance, holiday and honeymoon packages, business and study travel consultancy based in Dubai, UAE.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
