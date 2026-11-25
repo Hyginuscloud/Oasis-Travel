@@ -85,6 +85,8 @@ interface AuthStatusInfo {
   envPasscodeConfigured: boolean;
   hasClaimedAdmin: boolean;
   requiresSetup: boolean;
+  dbConnected?: boolean;
+  dbError?: string;
 }
 
 export function AdminPage() {
@@ -263,9 +265,11 @@ export function AdminPage() {
       if (res.ok) {
         const json = (await res.json()) as AuthStatusInfo;
         setAuthStatus(json);
+      } else {
+        setAuthFormError(`Authentication API returned HTTP ${res.status}. Verify Vercel API & database settings.`);
       }
     } catch {
-      // ignore transient error
+      setAuthFormError('Unable to reach authentication server. Please refresh and try again.');
     } finally {
       setCheckingAuthStatus(false);
     }
@@ -1077,11 +1081,20 @@ export function AdminPage() {
               </div>
             </div>
 
+            {authStatus?.dbConnected === false && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-900 leading-relaxed">
+                <strong>Database Connection Issue:</strong> Unable to reach PostgreSQL/Supabase
+                {authStatus.dbError ? ` (${authStatus.dbError})` : ''}. Check your{' '}
+                <code>SUPABASE_DB_URL</code> / <code>POSTGRES_URL</code> in Vercel Environment Variables.
+              </div>
+            )}
+
             {showSetup ? (
               <form onSubmit={handleInitialSetupSubmit} className="space-y-4">
                 <div className="p-3.5 rounded-xl bg-[#FAF8F3] border border-[#C9A45C]/40 text-xs text-[#10243B] leading-relaxed">
-                  <strong>First-Time Setup:</strong> Set your Primary Administrator password to activate password sign-in
-                  via <strong>/#</strong>. You can change it or assign manager passwords inside Security settings anytime.
+                  <strong>First-Time Database Setup:</strong> Your new database does not have an admin password saved
+                  yet. Enter your chosen Primary Administrator password below to save it into Supabase for{' '}
+                  <strong>/#</strong> sign-in (or add <code>ADMIN_PASSCODE</code> in Vercel Environment Variables).
                 </div>
 
                 {authFormError && (

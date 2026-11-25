@@ -35,8 +35,8 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       return res.status(401).json({ error: 'Invalid or expired administrator session. Please sign in again.' });
     }
     try {
-      await ensureSeeded();
       if (payload.source === 'password') {
+        await ensureSeeded();
         const dbUser = await findDashboardUserByUsername(payload.username);
         if (!dbUser || !dbUser.isActive) {
           return res.status(403).json({ error: 'Your dashboard access has been suspended or revoked.' });
@@ -63,6 +63,9 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
   }
 
   // 2. Fallback to Firebase ID Token (Google Sign-In)
+  if (!adminAuth) {
+    return res.status(401).json({ error: 'Invalid or expired authentication session.' });
+  }
   try {
     const decodedToken = await adminAuth.verifyIdToken(token);
     req.user = decodedToken;

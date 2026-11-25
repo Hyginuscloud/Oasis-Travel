@@ -6,6 +6,9 @@ export function normalizeExternalMediaUrl(rawUrl: string): string {
   const iframeSrcMatch = /src=["']([^"']+)["']/i.exec(trimmed);
   const candidate = (iframeSrcMatch ? iframeSrcMatch[1] : trimmed).trim();
 
+  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=\s]+$/i.test(candidate)) {
+    return candidate.replace(/\s+/g, '');
+  }
   if (candidate.startsWith('/src/assets/') || candidate.startsWith('/uploads/')) {
     return candidate;
   }
@@ -24,6 +27,7 @@ export function normalizeExternalMediaUrl(rawUrl: string): string {
 export function isSafeHttpOrLocalUrl(rawUrl: string): boolean {
   const normalized = normalizeExternalMediaUrl(rawUrl);
   if (!normalized) return false;
+  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(normalized)) return true;
   if (normalized.startsWith('/src/assets/') || normalized.startsWith('/uploads/')) return true;
   try {
     const parsed = new URL(normalized);

@@ -472,26 +472,53 @@ app.post('/api/ai/assistant', aiLimiter, async (req: Request, res: Response) => 
 });
 
 // ================= ADMIN / MANAGER PASSWORD AUTH ROUTES =================
+function getConfiguredEnvPasscode(): string {
+  const raw = (process.env.ADMIN_PASSCODE || '').trim();
+  if (!raw) return '';
+  if (
+    raw.length >= 2 &&
+    ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'")))
+  ) {
+    return raw.slice(1, -1).trim();
+  }
+  return raw;
+}
+
+function normalizeDashboardUsername(raw: unknown): string {
+  const clean = String(raw || 'admin').trim().toLowerCase() || 'admin';
+  if (clean === 'administrator' || clean === 'super_admin' || clean === 'hyginustina46@gmail.com') {
+    return 'admin';
+  }
+  return clean;
+}
+
 app.get('/api/auth/status', async (_req: Request, res: Response) => {
+  const envPasscode = getConfiguredEnvPasscode();
   try {
     await ensureSeeded();
-    const envPasscode = process.env.ADMIN_PASSCODE?.trim() || '';
     const hasClaimedAdmin = await hasAnyDashboardSuperAdmin();
     res.json({
       envPasscodeConfigured: Boolean(envPasscode),
       hasClaimedAdmin,
       requiresSetup: !envPasscode && !hasClaimedAdmin,
+      dbConnected: true,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unable to check authentication status.';
-    res.status(500).json({ error: message });
+    const message = error instanceof Error ? error.message : 'Unable to check database connection.';
+    res.json({
+      envPasscodeConfigured: Boolean(envPasscode),
+      hasClaimedAdmin: false,
+      requiresSetup: !envPasscode,
+      dbConnected: false,
+      dbError: message,
+    });
   }
 });
 
 app.post('/api/auth/setup', authLimiter, async (req: Request, res: Response) => {
   try {
     await ensureSeeded();
-    const envPasscode = process.env.ADMIN_PASSCODE?.trim() || '';
+    const envPasscode = getConfiguredEnvPasscode();
     if (envPasscode) {
       return res.status(403).json({
         error: 'Administrator passcode is managed by server environment configuration.',
@@ -535,17 +562,17 @@ app.post('/api/auth/setup', authLimiter, async (req: Request, res: Response) => 
 
 app.post('/api/auth/login', authLimiter, async (req: Request, res: Response) => {
   try {
-    await ensureSeeded();
     const rawUsername = String(req.body?.username || 'admin').trim().toLowerCase() || 'admin';
+    const normalizedUsername = normalizeDashboardUsername(rawUsername);
     const password = String(req.body?.password || '');
     if (!password) {
       return res.status(400).json({ error: 'Please enter your password.' });
     }
 
-    const envPasscode = process.env.ADMIN_PASSCODE?.trim() || '';
+    const envPasscode = getConfiguredEnvPasscode();
 
     // Server-configured env passcode always grants Primary Admin access
-    if (envPasscode && rawUsername === 'admin' && verifyConstantTimeSecret(password, envPasscode)) {
+    if (envPasscode && normalizedUsername === 'admin' && verifyConstantTimeSecret(password, envPasscode)) {
       const token = signAdminSessionToken({
         sub: 'admin',
         username: 'admin',
@@ -563,8 +590,13 @@ app.post('/api/auth/login', authLimiter, async (req: Request, res: Response) => 
       });
     }
 
-    // Check PostgreSQL password/manager accounts
-    const userRecord = await findDashboardUserByUsername(rawUsername);
+    await ensureSeeded();
+
+    // Check PostgreSQL password/manager accounts (checking exact username first, then normalized 'admin' alias)
+    let userRecord = await findDashboardUserByUsername(rawUsername);
+    if (!userRecord && normalizedUsername !== rawUsername) {
+      userRecord = await findDashboardUserByUsername(normalizedUsername);
+    }
     if (!userRecord || !userRecord.isActive) {
       return res.status(401).json({ error: 'Invalid username or password.' });
     }
@@ -604,7 +636,7 @@ app.get('/api/admin/me', (req: AuthRequest, res: Response) => {
     name: req.dashboardAccount?.displayName || req.user?.name || req.user?.email || 'Administrator',
     role: req.adminRole || 'admin',
     source: req.dashboardAccount?.source || 'google',
-    envPasscodeActive: Boolean(process.env.ADMIN_PASSCODE?.trim()),
+    envPasscodeActive: Boolean(getConfiguredEnvPasscode()),
   });
 });
 
@@ -617,7 +649,7 @@ app.post('/api/admin/change-password', async (req: AuthRequest, res: Response) =
     }
 
     const targetUsername = req.dashboardAccount?.username || 'admin';
-    const envPasscode = process.env.ADMIN_PASSCODE?.trim() || '';
+    const envPasscode = getConfiguredEnvPasscode();
 
     if (req.dashboardAccount) {
       if (req.dashboardAccount.source === 'env_passcode') {
@@ -1252,12 +1284,44 @@ app.post('/api/admin/media/upload', async (req: AuthRequest, res: Response) => {
       }
 
       const safeFilename = `oasis-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${resolved.ext}`;
-      const resolvedPath = path.resolve(UPLOADS_DIR, safeFilename);
-      if (!resolvedPath.startsWith(UPLOADS_DIR + path.sep)) {
-        return res.status(400).json({ error: 'Invalid file destination.' });
+      const supabaseRestUrl = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+      const supabaseServiceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+      const storageBucket = (process.env.SUPABASE_STORAGE_BUCKET || 'oasis-media').trim();
+
+      if (supabaseRestUrl && supabaseServiceKey) {
+        const mimeForUpload =
+          rawMime || (detectedKind === 'video' ? `video/${resolved.ext.slice(1)}` : `image/${resolved.ext === '.jpg' ? 'jpeg' : resolved.ext.slice(1)}`);
+        const uploadRes = await fetch(
+          `${supabaseRestUrl}/storage/v1/object/${encodeURIComponent(storageBucket)}/${encodeURIComponent(safeFilename)}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${supabaseServiceKey}`,
+              apikey: supabaseServiceKey,
+              'Content-Type': mimeForUpload,
+              'x-upsert': 'true',
+            },
+            body: buffer,
+          }
+        );
+        if (uploadRes.ok) {
+          finalUrl = `${supabaseRestUrl}/storage/v1/object/public/${encodeURIComponent(storageBucket)}/${encodeURIComponent(safeFilename)}`;
+        }
       }
-      fs.writeFileSync(resolvedPath, buffer);
-      finalUrl = `/uploads/${safeFilename}`;
+
+      if (!finalUrl && isVercel && detectedKind === 'image' && ['.png', '.jpg', '.webp', '.gif'].includes(resolved.ext) && buffer.length <= 2 * 1024 * 1024) {
+        const safeMime = resolved.ext === '.jpg' ? 'image/jpeg' : `image/${resolved.ext.slice(1)}`;
+        finalUrl = `data:${safeMime};base64,${buffer.toString('base64')}`;
+      }
+
+      if (!finalUrl) {
+        const resolvedPath = path.resolve(UPLOADS_DIR, safeFilename);
+        if (!resolvedPath.startsWith(UPLOADS_DIR + path.sep)) {
+          return res.status(400).json({ error: 'Invalid file destination.' });
+        }
+        fs.writeFileSync(resolvedPath, buffer);
+        finalUrl = `/uploads/${safeFilename}`;
+      }
     } else if (externalUrl && isSafeMediaUrl(String(externalUrl))) {
       finalUrl = normalizeExternalMediaUrl(String(externalUrl));
     } else {
@@ -1604,7 +1668,7 @@ async function startServer() {
   });
 }
 
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
   startServer();
 }
 

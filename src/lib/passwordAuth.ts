@@ -3,7 +3,34 @@ import crypto from 'node:crypto';
 const EPHEMERAL_FALLBACK_SECRET = crypto.randomBytes(32).toString('hex');
 
 function getSessionSecret(): string {
-  return process.env.SESSION_SECRET?.trim() || EPHEMERAL_FALLBACK_SECRET;
+  const explicit = process.env.SESSION_SECRET?.trim();
+  if (explicit) return explicit;
+
+  const deploymentEntropy = [
+    process.env.ADMIN_PASSCODE,
+    process.env.SUPABASE_DB_URL,
+    process.env.POSTGRES_URL,
+    process.env.POSTGRES_PRISMA_URL,
+    process.env.POSTGRES_URL_NON_POOLING,
+    process.env.DATABASE_URL,
+    process.env.SUPABASE_DB_HOST,
+    process.env.POSTGRES_HOST,
+    process.env.SUPABASE_DB_PASSWORD,
+    process.env.POSTGRES_PASSWORD,
+    process.env.SQL_PASSWORD,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  ]
+    .filter((v): v is string => Boolean(v && v.trim()))
+    .join('|');
+
+  if (deploymentEntropy) {
+    return crypto
+      .createHmac('sha256', 'oasis-dubai-session-key-v1')
+      .update(deploymentEntropy)
+      .digest('hex');
+  }
+
+  return EPHEMERAL_FALLBACK_SECRET;
 }
 
 export function hashPassword(password: string): string {

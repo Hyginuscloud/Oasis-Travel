@@ -120,9 +120,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: username.trim() || 'admin', password }),
     });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.token) {
-      throw new Error(json.error || 'Invalid credentials.');
+    const text = await res.text();
+    let json: { token?: string; user?: PasswordSessionUser; error?: string } = {};
+    try {
+      json = JSON.parse(text);
+    } catch {
+      // non-JSON response (e.g., serverless function error)
+    }
+    if (!res.ok || !json.token || !json.user) {
+      throw new Error(
+        json.error ||
+          (res.status >= 500
+            ? `Authentication service error (HTTP ${res.status}). Check Supabase environment variables and deployment logs.`
+            : 'Invalid credentials.')
+      );
     }
     setAdminToken(json.token);
     setPasswordUser(json.user);
@@ -134,9 +145,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password, displayName: displayName || 'Primary Administrator' }),
     });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.token) {
-      throw new Error(json.error || 'Unable to set up administrator password.');
+    const text = await res.text();
+    let json: { token?: string; user?: PasswordSessionUser; error?: string } = {};
+    try {
+      json = JSON.parse(text);
+    } catch {
+      // non-JSON response
+    }
+    if (!res.ok || !json.token || !json.user) {
+      throw new Error(
+        json.error ||
+          (res.status >= 500
+            ? `Setup service error (HTTP ${res.status}). Check Supabase environment variables and deployment logs.`
+            : 'Unable to set up administrator password.')
+      );
     }
     setAdminToken(json.token);
     setPasswordUser(json.user);

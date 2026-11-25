@@ -1,5 +1,5 @@
 import { asc, desc, eq } from 'drizzle-orm';
-import { db } from './index.ts';
+import { db, pool } from './index.ts';
 import {
   authorizedAdmins,
   dashboardUsers,
@@ -33,7 +33,43 @@ import {
 } from './seedData.ts';
 
 let seedPromise: Promise<void> | null = null;
+let dashboardTablePromise: Promise<void> | null = null;
 const SEED_IMAGE_SYNC_VERSION = '3';
+
+export async function ensureDashboardUsersTable(): Promise<void> {
+  if (dashboardTablePromise) return dashboardTablePromise;
+  dashboardTablePromise = (async () => {
+    try {
+      await pool.query('SELECT 1 FROM dashboard_users LIMIT 1');
+    } catch (checkError: unknown) {
+      const code = (checkError as { code?: string })?.code;
+      if (code === '42P01') {
+        try {
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS dashboard_users (
+              id SERIAL PRIMARY KEY,
+              username TEXT NOT NULL UNIQUE,
+              display_name TEXT NOT NULL,
+              role TEXT NOT NULL DEFAULT 'manager',
+              password_hash TEXT NOT NULL,
+              is_active BOOLEAN NOT NULL DEFAULT TRUE,
+              added_by TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+          `);
+        } catch (createError: unknown) {
+          dashboardTablePromise = null;
+          throw createError;
+        }
+      } else {
+        dashboardTablePromise = null;
+        throw checkError;
+      }
+    }
+  })();
+  return dashboardTablePromise;
+}
 
 export async function ensureSeeded(): Promise<void> {
   if (seedPromise) {
@@ -41,6 +77,7 @@ export async function ensureSeeded(): Promise<void> {
   }
   seedPromise = (async () => {
     try {
+      await ensureDashboardUsersTable();
       // Seed authorized owner email from platform metadata + env if configured
       const ownerEmails = ['hyginustina46@gmail.com'];
       if (process.env.ADMIN_EMAILS) {
@@ -954,6 +991,7 @@ export async function deleteSpecialOfferRecord(id: number) {
 // Dashboard Password & Manager Accounts
 export async function findDashboardUserByUsername(username: string) {
   try {
+    await ensureDashboardUsersTable();
     const clean = username.trim().toLowerCase();
     const rows = await db.select().from(dashboardUsers).where(eq(dashboardUsers.username, clean));
     return rows[0] || null;
@@ -965,6 +1003,7 @@ export async function findDashboardUserByUsername(username: string) {
 
 export async function hasAnyDashboardSuperAdmin(): Promise<boolean> {
   try {
+    await ensureDashboardUsersTable();
     const rows = await db
       .select({ id: dashboardUsers.id })
       .from(dashboardUsers)
@@ -978,6 +1017,7 @@ export async function hasAnyDashboardSuperAdmin(): Promise<boolean> {
 
 export async function createOrClaimSuperAdmin(username: string, displayName: string, passwordHash: string) {
   try {
+    await ensureDashboardUsersTable();
     const clean = username.trim().toLowerCase();
     const res = await db
       .insert(dashboardUsers)
@@ -1006,6 +1046,7 @@ export async function upsertDashboardUserPassword(
   addedBy: string
 ) {
   try {
+    await ensureDashboardUsersTable();
     const clean = username.trim().toLowerCase();
     const res = await db
       .insert(dashboardUsers)
