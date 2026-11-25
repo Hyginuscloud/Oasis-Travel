@@ -66,10 +66,12 @@ import { AuthRequest, requireAdmin, requireAuth } from './src/middleware/auth.ts
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const isVercel = Boolean(process.env.VERCEL);
-const UPLOADS_DIR = isVercel ? path.resolve('/tmp', 'oasis-uploads') : path.resolve(__dirname, 'uploads');
+const SERVER_DIR =
+  typeof import.meta !== 'undefined' && import.meta.url
+    ? path.dirname(fileURLToPath(import.meta.url))
+    : process.cwd();
+const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+const UPLOADS_DIR = isVercel ? path.resolve('/tmp', 'oasis-uploads') : path.resolve(SERVER_DIR, 'uploads');
 
 try {
   if (!fs.existsSync(UPLOADS_DIR)) {
@@ -1656,7 +1658,7 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distDir = path.resolve(__dirname, 'dist');
+    const distDir = path.resolve(SERVER_DIR, 'dist');
     app.use(express.static(distDir));
     app.get('*', (_req: Request, res: Response) => {
       res.sendFile(path.join(distDir, 'index.html'));
