@@ -5,7 +5,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import {
   addAuthorizedAdmin,
   createDesignProjectRecord,
@@ -112,11 +111,19 @@ app.use('/api/admin/media/upload', express.json({ limit: '85mb' }));
 app.use(express.json({ limit: '8mb' }));
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
 
+function getRateLimitKey(req: Request): string {
+  const xff = req.headers['x-forwarded-for'];
+  const first = Array.isArray(xff) ? xff[0] : xff?.split(',')[0];
+  return (first || req.ip || req.socket?.remoteAddress || 'unknown').trim();
+}
+
 const enquiryLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
+  keyGenerator: getRateLimitKey,
   message: { error: 'Too many enquiry submissions. Please wait a few minutes or contact us on WhatsApp.' },
 });
 
@@ -125,6 +132,8 @@ const authLimiter = rateLimit({
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
+  keyGenerator: getRateLimitKey,
   message: { error: 'Too many login attempts. Please wait a few minutes and try again.' },
 });
 
@@ -133,6 +142,8 @@ const adminLimiter = rateLimit({
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
+  keyGenerator: getRateLimitKey,
   message: { error: 'Rate limit exceeded for administration requests.' },
 });
 
@@ -141,6 +152,8 @@ const aiLimiter = rateLimit({
   max: 35,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
+  keyGenerator: getRateLimitKey,
   message: { error: 'Too many AI assistant requests. Please try again in a few minutes or chat on WhatsApp.' },
 });
 
@@ -427,6 +440,7 @@ app.post('/api/ai/assistant', aiLimiter, async (req: Request, res: Response) => 
       `Key FAQs:\n${faqList}`,
     ].join('\n\n');
 
+    const { GoogleGenAI, ThinkingLevel } = await import('@google/genai');
     const ai = new GoogleGenAI({
       apiKey,
       httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },

@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Auth, getAuth } from 'firebase-admin/auth';
-import { getApps, initializeApp } from 'firebase-admin/app';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 
 function resolveProjectId(): string {
   const fromEnv = (process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || '').trim();
@@ -20,16 +19,15 @@ function resolveProjectId(): string {
   return 'utility-passage-7bvhw';
 }
 
-let cachedAuth: Auth | null = null;
-try {
+export async function verifyFirebaseToken(idToken: string): Promise<DecodedIdToken> {
+  const [{ getApps, initializeApp }, { getAuth }] = await Promise.all([
+    import('firebase-admin/app'),
+    import('firebase-admin/auth'),
+  ]);
   if (!getApps().length) {
     initializeApp({
       projectId: resolveProjectId(),
     });
   }
-  cachedAuth = getAuth();
-} catch (err) {
-  console.warn('Firebase Admin initialization deferred:', err);
+  return getAuth().verifyIdToken(idToken);
 }
-
-export const adminAuth = cachedAuth as Auth;

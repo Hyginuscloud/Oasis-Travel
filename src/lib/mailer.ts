@@ -1,5 +1,3 @@
-import nodemailer from 'nodemailer';
-
 export interface EnquiryEmailPayload {
   referenceNumber: string;
   fullName: string;
@@ -40,6 +38,8 @@ export async function dispatchEnquiryEmails(
   }
 
   try {
+    const nodemailerMod = await import('nodemailer');
+    const nodemailer = nodemailerMod.default || nodemailerMod;
     const transporter = nodemailer.createTransport({
       host,
       port,

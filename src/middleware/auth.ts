@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
-import { DecodedIdToken } from 'firebase-admin/auth';
-import { adminAuth } from '../lib/firebase-admin.ts';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import { verifyFirebaseToken } from '../lib/firebase-admin.ts';
 import { verifyAdminSessionToken } from '../lib/passwordAuth.ts';
 import {
   ensureSeeded,
@@ -63,11 +63,8 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
   }
 
   // 2. Fallback to Firebase ID Token (Google Sign-In)
-  if (!adminAuth) {
-    return res.status(401).json({ error: 'Invalid or expired authentication session.' });
-  }
   try {
-    const decodedToken = await adminAuth.verifyIdToken(token);
+    const decodedToken = await verifyFirebaseToken(token);
     req.user = decodedToken;
     if (decodedToken.email) {
       await ensureSeeded();
