@@ -128,11 +128,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // non-JSON response (e.g., serverless function error)
     }
     if (!res.ok || !json.token || !json.user) {
+      const plainSnippet = text
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 220);
       throw new Error(
         json.error ||
           (res.status >= 500
-            ? `Authentication service error (HTTP ${res.status}). Check Supabase environment variables and deployment logs.`
-            : 'Invalid credentials.')
+            ? `Authentication service error (HTTP ${res.status})${plainSnippet ? `: ${plainSnippet}` : '. Check Supabase environment variables and deployment logs.'}`
+            : plainSnippet || 'Invalid credentials.')
       );
     }
     setAdminToken(json.token);
@@ -153,11 +158,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // non-JSON response
     }
     if (!res.ok || !json.token || !json.user) {
+      const plainSnippet = text
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 220);
       throw new Error(
         json.error ||
           (res.status >= 500
-            ? `Setup service error (HTTP ${res.status}). Check Supabase environment variables and deployment logs.`
-            : 'Unable to set up administrator password.')
+            ? `Setup service error (HTTP ${res.status})${plainSnippet ? `: ${plainSnippet}` : '. Check Supabase environment variables and deployment logs.'}`
+            : plainSnippet || 'Unable to set up administrator password.')
       );
     }
     setAdminToken(json.token);

@@ -95,6 +95,19 @@ app.use((_req, res, next) => {
   next();
 });
 
+app.use((req, _res, next) => {
+  if (typeof req.body === 'string' && req.headers['content-type']?.includes('application/json')) {
+    try {
+      req.body = JSON.parse(req.body);
+      (req as { _body?: boolean })._body = true;
+    } catch {
+      // let express.json handle malformed string bodies
+    }
+  } else if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+    (req as { _body?: boolean })._body = true;
+  }
+  next();
+});
 app.use('/api/admin/media/upload', express.json({ limit: '85mb' }));
 app.use(express.json({ limit: '8mb' }));
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
@@ -1653,6 +1666,15 @@ app.delete('/api/admin/admins/:id', async (req: AuthRequest, res: Response) => {
     const message = error instanceof Error ? error.message : 'Failed to remove administrator account.';
     res.status(500).json({ error: message });
   }
+});
+
+app.use((err: unknown, _req: Request, res: Response, _next: express.NextFunction) => {
+  console.error('Unhandled Express error:', err);
+  if (res.headersSent) return;
+  const errObj = (err && typeof err === 'object' ? err : {}) as { status?: number; statusCode?: number; message?: string };
+  const status = errObj.status || errObj.statusCode || 500;
+  const message = err instanceof Error ? err.message : errObj.message || 'Internal server error.';
+  res.status(status >= 400 && status < 600 ? status : 500).json({ error: message });
 });
 
 async function startServer() {

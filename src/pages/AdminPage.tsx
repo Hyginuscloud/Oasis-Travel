@@ -262,11 +262,19 @@ export function AdminPage() {
     setCheckingAuthStatus(true);
     try {
       const res = await fetch('/api/auth/status');
+      const text = await res.text();
       if (res.ok) {
-        const json = (await res.json()) as AuthStatusInfo;
+        const json = JSON.parse(text) as AuthStatusInfo;
         setAuthStatus(json);
       } else {
-        setAuthFormError(`Authentication API returned HTTP ${res.status}. Verify Vercel API & database settings.`);
+        const snippet = text
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 180);
+        setAuthFormError(
+          `Authentication API returned HTTP ${res.status}${snippet ? `: ${snippet}` : '. Verify Vercel API & database settings.'}`
+        );
       }
     } catch {
       setAuthFormError('Unable to reach authentication server. Please refresh and try again.');
