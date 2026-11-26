@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema.ts';
@@ -6,17 +7,26 @@ declare global {
   var _postgresPool: Pool | undefined;
 }
 
+function stripEnvQuotes(val?: string): string {
+  const trimmed = (val || '').trim();
+  if (
+    trimmed.length >= 2 &&
+    ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'")))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 export const createPool = () => {
   if (!global._postgresPool) {
-    const supabaseUrl = (
-      process.env.SUPABASE_DB_URL ||
-      process.env.POSTGRES_URL ||
-      process.env.POSTGRES_PRISMA_URL ||
-      process.env.POSTGRES_URL_NON_POOLING ||
-      process.env.DATABASE_URL ||
-      ''
-    ).trim();
-    const supabaseHost = (process.env.SUPABASE_DB_HOST || process.env.POSTGRES_HOST || '').trim();
+    const supabaseUrl =
+      stripEnvQuotes(process.env.SUPABASE_DB_URL) ||
+      stripEnvQuotes(process.env.POSTGRES_URL) ||
+      stripEnvQuotes(process.env.POSTGRES_PRISMA_URL) ||
+      stripEnvQuotes(process.env.POSTGRES_URL_NON_POOLING) ||
+      stripEnvQuotes(process.env.DATABASE_URL);
+    const supabaseHost = stripEnvQuotes(process.env.SUPABASE_DB_HOST || process.env.POSTGRES_HOST);
     const useSupabaseHost = Boolean(supabaseHost);
 
     global._postgresPool = new Pool(
@@ -25,25 +35,28 @@ export const createPool = () => {
             connectionString: supabaseUrl,
             ssl: { rejectUnauthorized: false },
             max: 5,
+            idleTimeoutMillis: 10000,
             connectionTimeoutMillis: 15000,
           }
         : useSupabaseHost
           ? {
               host: supabaseHost,
-              port: Number(process.env.SUPABASE_DB_PORT || '6543'),
-              user: (process.env.SUPABASE_DB_USER || process.env.POSTGRES_USER || '').trim(),
-              password: process.env.SUPABASE_DB_PASSWORD || process.env.POSTGRES_PASSWORD,
-              database: (process.env.SUPABASE_DB_NAME || process.env.POSTGRES_DATABASE || 'postgres').trim(),
+              port: Number(stripEnvQuotes(process.env.SUPABASE_DB_PORT) || '6543'),
+              user: stripEnvQuotes(process.env.SUPABASE_DB_USER || process.env.POSTGRES_USER),
+              password: stripEnvQuotes(process.env.SUPABASE_DB_PASSWORD || process.env.POSTGRES_PASSWORD),
+              database: stripEnvQuotes(process.env.SUPABASE_DB_NAME || process.env.POSTGRES_DATABASE) || 'postgres',
               ssl: { rejectUnauthorized: false },
               max: 5,
+              idleTimeoutMillis: 10000,
               connectionTimeoutMillis: 15000,
             }
           : {
-              host: process.env.SQL_HOST,
-              user: process.env.SQL_USER,
-              password: process.env.SQL_PASSWORD,
-              database: process.env.SQL_DB_NAME,
+              host: stripEnvQuotes(process.env.SQL_HOST),
+              user: stripEnvQuotes(process.env.SQL_USER),
+              password: stripEnvQuotes(process.env.SQL_PASSWORD),
+              database: stripEnvQuotes(process.env.SQL_DB_NAME),
               max: 10,
+              idleTimeoutMillis: 10000,
               connectionTimeoutMillis: 15000,
             }
     );

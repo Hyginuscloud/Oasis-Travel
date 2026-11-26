@@ -1262,6 +1262,14 @@ export function AdminPage() {
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
+              onClick={loadDashboard}
+              disabled={loadingDash}
+              className="px-4 py-2.5 min-h-[44px] rounded-xl bg-[#DC2626] text-white text-xs font-semibold hover:bg-[#B91C1C] disabled:opacity-60 cursor-pointer"
+            >
+              {loadingDash ? 'Retrying...' : 'Retry Dashboard'}
+            </button>
+            <button
+              type="button"
               onClick={signOutAdmin}
               className="px-4 py-2.5 min-h-[44px] rounded-xl bg-[#10243B] text-white text-xs font-semibold hover:bg-[#193B59] cursor-pointer"
             >

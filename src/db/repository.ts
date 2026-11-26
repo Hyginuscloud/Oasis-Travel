@@ -36,6 +36,33 @@ let seedPromise: Promise<void> | null = null;
 let dashboardTablePromise: Promise<void> | null = null;
 const SEED_IMAGE_SYNC_VERSION = '3';
 
+function formatSafeDbError(prefix: string, error: unknown): string {
+  const errObj = (error && typeof error === 'object' ? error : {}) as {
+    message?: string;
+    code?: string;
+    hostname?: string;
+    cause?: { message?: string; code?: string; hostname?: string };
+  };
+  const rootMsg = errObj.cause?.message || errObj.message || '';
+  const rootCode = errObj.cause?.code || errObj.code || '';
+  const host = errObj.cause?.hostname || errObj.hostname || '';
+  const cleaned = rootMsg.replace(/postgresql:\/\/[^@\s]+@/gi, 'postgresql://***@').trim();
+
+  if (rootCode === '28P01' || /password authentication failed/i.test(cleaned)) {
+    return `${prefix} (Supabase database password authentication failed — verify SUPABASE_DB_URL password.)`;
+  }
+  if ((rootCode === 'ENETUNREACH' || rootCode === 'ENOTFOUND' || rootCode === 'EAI_AGAIN') && /supabase\.co/i.test(host + cleaned)) {
+    return `${prefix} (Cannot reach Supabase host ${host || ''}. On Vercel, use the Transaction Pooler URI *.pooler.supabase.com:6543 instead of Direct Connection db.*.supabase.co:5432.)`;
+  }
+  if (rootCode === 'ECONNREFUSED' && /127\.0\.0\.1|localhost/i.test(cleaned)) {
+    return `${prefix} (SUPABASE_DB_URL / POSTGRES_URL is not configured or contains invalid quotes.)`;
+  }
+  if (rootCode === '42P01' || rootCode === '42703') {
+    return `${prefix} (${cleaned} — run supabase/schema.sql in Supabase SQL Editor.)`;
+  }
+  return cleaned ? `${prefix} (${cleaned})` : prefix;
+}
+
 export async function ensureDashboardUsersTable(): Promise<void> {
   if (dashboardTablePromise) return dashboardTablePromise;
   dashboardTablePromise = (async () => {
@@ -71,6 +98,61 @@ export async function ensureDashboardUsersTable(): Promise<void> {
   return dashboardTablePromise;
 }
 
+async function ensureExtendedSchemaColumns(): Promise<void> {
+  try {
+    await pool.query('SELECT media_type, media_url FROM services LIMIT 1');
+  } catch (err: unknown) {
+    if ((err as { code?: string })?.code === '42703') {
+      await pool.query(`
+        ALTER TABLE services ADD COLUMN IF NOT EXISTS media_type TEXT NOT NULL DEFAULT 'image';
+        ALTER TABLE services ADD COLUMN IF NOT EXISTS media_url TEXT;
+      `);
+    }
+  }
+  for (const checkSql of [
+    {
+      probe: 'SELECT 1 FROM design_projects LIMIT 1',
+      create: `CREATE TABLE IF NOT EXISTS design_projects (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT NOT NULL,
+        media_type TEXT NOT NULL DEFAULT 'image',
+        media_url TEXT NOT NULL,
+        thumbnail_url TEXT,
+        featured BOOLEAN NOT NULL DEFAULT TRUE,
+        published BOOLEAN NOT NULL DEFAULT TRUE,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );`,
+    },
+    {
+      probe: 'SELECT 1 FROM special_offers LIMIT 1',
+      create: `CREATE TABLE IF NOT EXISTS special_offers (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        badge TEXT NOT NULL DEFAULT 'Special Offer',
+        description TEXT NOT NULL,
+        media_type TEXT NOT NULL DEFAULT 'image',
+        media_url TEXT NOT NULL,
+        thumbnail_url TEXT,
+        featured BOOLEAN NOT NULL DEFAULT TRUE,
+        published BOOLEAN NOT NULL DEFAULT TRUE,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );`,
+    },
+  ]) {
+    try {
+      await pool.query(checkSql.probe);
+    } catch (err: unknown) {
+      if ((err as { code?: string })?.code === '42P01') {
+        await pool.query(checkSql.create);
+      }
+    }
+  }
+}
+
 export async function ensureSeeded(): Promise<void> {
   if (seedPromise) {
     return seedPromise;
@@ -78,108 +160,105 @@ export async function ensureSeeded(): Promise<void> {
   seedPromise = (async () => {
     try {
       await ensureDashboardUsersTable();
-      // Seed authorized owner email from platform metadata + env if configured
-      const ownerEmails = ['hyginustina46@gmail.com'];
+
+      // Seed authorized owner emails from platform metadata + env in a single batch
+      const ownerEmails = new Set(['hyginustina46@gmail.com']);
       if (process.env.ADMIN_EMAILS) {
         for (const em of process.env.ADMIN_EMAILS.split(',')) {
           const clean = em.trim().toLowerCase();
-          if (clean) ownerEmails.push(clean);
+          if (clean) ownerEmails.add(clean);
         }
       }
-      for (const email of ownerEmails) {
-        await db
-          .insert(authorizedAdmins)
-          .values({
-            email: email.toLowerCase(),
+      await db
+        .insert(authorizedAdmins)
+        .values(
+          Array.from(ownerEmails).map((email) => ({
+            email,
             role: 'super_admin',
             addedBy: 'system',
             isActive: true,
-          })
-          .onConflictDoNothing();
-      }
+          }))
+        )
+        .onConflictDoNothing();
 
-      // Seed site settings if empty (and backfill any newly introduced keys)
+      // Seed site settings if empty (and backfill any newly introduced keys in one batch)
       const existingSettings = await db.select().from(siteSettings);
       const existingSettingKeys = new Set(existingSettings.map((s) => s.key));
-      for (const [key, value] of Object.entries(INITIAL_SITE_SETTINGS)) {
-        if (!existingSettingKeys.has(key)) {
-          await db.insert(siteSettings).values({ key, value }).onConflictDoNothing();
-        }
+      const missingSettingRows = Object.entries(INITIAL_SITE_SETTINGS)
+        .filter(([key]) => !existingSettingKeys.has(key))
+        .map(([key, value]) => ({ key, value }));
+      if (missingSettingRows.length > 0) {
+        await db.insert(siteSettings).values(missingSettingRows).onConflictDoNothing();
       }
 
-      // Seed services if empty
-      const existingServices = await db.select().from(services);
-      if (existingServices.length === 0) {
-        for (const item of INITIAL_SERVICES) {
-          await db.insert(services).values(item).onConflictDoNothing();
-        }
-      }
-
-      // Seed destinations if empty
-      const existingDestinations = await db.select().from(destinations);
-      if (existingDestinations.length === 0) {
-        for (const item of INITIAL_DESTINATIONS) {
-          await db.insert(destinations).values(item).onConflictDoNothing();
-        }
-      }
-
-      // Seed packages if empty
-      const existingPackages = await db.select().from(packages);
-      if (existingPackages.length === 0) {
-        for (const item of INITIAL_PACKAGES) {
-          await db.insert(packages).values(item).onConflictDoNothing();
-        }
-      }
-
-      // Seed sample testimonials if empty
-      const existingTestimonials = await db.select().from(testimonials);
-      if (existingTestimonials.length === 0) {
-        for (const item of INITIAL_TESTIMONIALS) {
-          await db.insert(testimonials).values(item);
-        }
-      }
-
-      // Seed FAQs if empty
-      const existingFaqs = await db.select().from(faqs);
-      if (existingFaqs.length === 0) {
-        for (const item of INITIAL_FAQS) {
-          await db.insert(faqs).values(item);
-        }
-      }
-
-      // Seed media assets if empty
-      const existingMedia = await db.select().from(mediaAssets);
-      if (existingMedia.length === 0) {
-        for (const item of INITIAL_MEDIA_ASSETS) {
-          await db.insert(mediaAssets).values(item);
-        }
-      }
-
-      // Seed design projects if empty
-      const existingProjects = await db.select().from(designProjects);
-      if (existingProjects.length === 0) {
-        for (const item of INITIAL_DESIGN_PROJECTS) {
-          await db.insert(designProjects).values(item);
-        }
-      }
-
-      // Seed special offers once per database
       const seededOffersFlag = existingSettings.find((s) => s.key === 'seed_special_offers_v1');
+      const syncSetting = existingSettings.find((s) => s.key === 'seed_image_sync_version');
+      if (seededOffersFlag && syncSetting?.value === SEED_IMAGE_SYNC_VERSION) {
+        return;
+      }
+
+      await ensureExtendedSchemaColumns();
+
+      // Read all seedable tables in parallel for fast serverless cold starts
+      const [
+        existingServices,
+        existingDestinations,
+        existingPackages,
+        existingTestimonials,
+        existingFaqs,
+        existingMedia,
+        existingProjects,
+        existingOffers,
+      ] = await Promise.all([
+        db.select().from(services),
+        db.select().from(destinations),
+        db.select().from(packages),
+        db.select({ id: testimonials.id }).from(testimonials).limit(1),
+        db.select({ id: faqs.id }).from(faqs).limit(1),
+        db.select().from(mediaAssets),
+        db.select({ id: designProjects.id }).from(designProjects).limit(1),
+        db.select({ id: specialOffers.id }).from(specialOffers).limit(1),
+      ]);
+
+      const batchTasks: Promise<unknown>[] = [];
+      if (existingServices.length === 0) {
+        batchTasks.push(db.insert(services).values(INITIAL_SERVICES).onConflictDoNothing());
+      }
+      if (existingDestinations.length === 0) {
+        batchTasks.push(db.insert(destinations).values(INITIAL_DESTINATIONS).onConflictDoNothing());
+      }
+      if (existingPackages.length === 0) {
+        batchTasks.push(db.insert(packages).values(INITIAL_PACKAGES).onConflictDoNothing());
+      }
+      if (existingTestimonials.length === 0) {
+        batchTasks.push(db.insert(testimonials).values(INITIAL_TESTIMONIALS));
+      }
+      if (existingFaqs.length === 0) {
+        batchTasks.push(db.insert(faqs).values(INITIAL_FAQS));
+      }
+      if (existingMedia.length === 0) {
+        batchTasks.push(db.insert(mediaAssets).values(INITIAL_MEDIA_ASSETS));
+      }
+      if (existingProjects.length === 0) {
+        batchTasks.push(db.insert(designProjects).values(INITIAL_DESIGN_PROJECTS));
+      }
       if (!seededOffersFlag) {
-        const existingOffers = await db.select().from(specialOffers);
         if (existingOffers.length === 0) {
-          for (const item of INITIAL_SPECIAL_OFFERS) {
-            await db.insert(specialOffers).values(item);
-          }
+          batchTasks.push(db.insert(specialOffers).values(INITIAL_SPECIAL_OFFERS));
         }
-        await db
-          .insert(siteSettings)
-          .values({ key: 'seed_special_offers_v1', value: '1', updatedAt: new Date() })
-          .onConflictDoNothing();
+        batchTasks.push(
+          db
+            .insert(siteSettings)
+            .values({ key: 'seed_special_offers_v1', value: '1', updatedAt: new Date() })
+            .onConflictDoNothing()
+        );
+      }
+
+      if (batchTasks.length > 0) {
+        await Promise.all(batchTasks);
       }
 
       // Versioned idempotent sync for existing databases seeded with older image assignments
-      const syncSetting = existingSettings.find((s) => s.key === 'seed_image_sync_version');
       if (syncSetting?.value !== SEED_IMAGE_SYNC_VERSION) {
         const legacySharedImages = new Set([
           HERO_IMAGE,
@@ -196,53 +275,51 @@ export async function ensureSeeded(): Promise<void> {
           '/src/assets/images/abu_dhabi_mosque_1795375304484.jpg',
         ]);
 
-        const destBySlug = new Map(existingDestinations.map((row) => [row.slug, row]));
-        for (const item of INITIAL_DESTINATIONS) {
-          const existing = destBySlug.get(item.slug);
-          if (!existing) {
-            await db.insert(destinations).values(item).onConflictDoNothing();
-          } else if (legacySharedImages.has(existing.imageUrl) && existing.imageUrl !== item.imageUrl) {
-            await db
-              .update(destinations)
-              .set({ imageUrl: item.imageUrl })
-              .where(eq(destinations.id, existing.id));
+        if (existingDestinations.length > 0) {
+          const destBySlug = new Map(existingDestinations.map((row) => [row.slug, row]));
+          for (const item of INITIAL_DESTINATIONS) {
+            const existing = destBySlug.get(item.slug);
+            if (!existing) {
+              await db.insert(destinations).values(item).onConflictDoNothing();
+            } else if (legacySharedImages.has(existing.imageUrl) && existing.imageUrl !== item.imageUrl) {
+              await db.update(destinations).set({ imageUrl: item.imageUrl }).where(eq(destinations.id, existing.id));
+            }
           }
         }
 
-        const pkgBySlug = new Map(existingPackages.map((row) => [row.slug, row]));
-        for (const item of INITIAL_PACKAGES) {
-          const existing = pkgBySlug.get(item.slug);
-          if (!existing) {
-            await db.insert(packages).values(item).onConflictDoNothing();
-          } else if (legacySharedImages.has(existing.imageUrl) && existing.imageUrl !== item.imageUrl) {
-            await db
-              .update(packages)
-              .set({ imageUrl: item.imageUrl })
-              .where(eq(packages.id, existing.id));
+        if (existingPackages.length > 0) {
+          const pkgBySlug = new Map(existingPackages.map((row) => [row.slug, row]));
+          for (const item of INITIAL_PACKAGES) {
+            const existing = pkgBySlug.get(item.slug);
+            if (!existing) {
+              await db.insert(packages).values(item).onConflictDoNothing();
+            } else if (legacySharedImages.has(existing.imageUrl) && existing.imageUrl !== item.imageUrl) {
+              await db.update(packages).set({ imageUrl: item.imageUrl }).where(eq(packages.id, existing.id));
+            }
           }
         }
 
-        const svcByCode = new Map(existingServices.map((row) => [row.code, row]));
-        for (const item of INITIAL_SERVICES) {
-          const existing = svcByCode.get(item.code);
-          if (!existing) {
-            await db.insert(services).values(item).onConflictDoNothing();
-          } else if (
-            existing.imageUrl &&
-            legacyServiceImages.has(existing.imageUrl) &&
-            existing.imageUrl !== item.imageUrl
-          ) {
-            await db
-              .update(services)
-              .set({ imageUrl: item.imageUrl })
-              .where(eq(services.id, existing.id));
+        if (existingServices.length > 0) {
+          const svcByCode = new Map(existingServices.map((row) => [row.code, row]));
+          for (const item of INITIAL_SERVICES) {
+            const existing = svcByCode.get(item.code);
+            if (!existing) {
+              await db.insert(services).values(item).onConflictDoNothing();
+            } else if (
+              existing.imageUrl &&
+              legacyServiceImages.has(existing.imageUrl) &&
+              existing.imageUrl !== item.imageUrl
+            ) {
+              await db.update(services).set({ imageUrl: item.imageUrl }).where(eq(services.id, existing.id));
+            }
           }
         }
 
-        const existingUrls = new Set(existingMedia.map((m) => m.url));
-        for (const asset of INITIAL_MEDIA_ASSETS) {
-          if (!existingUrls.has(asset.url)) {
-            await db.insert(mediaAssets).values(asset);
+        if (existingMedia.length > 0) {
+          const existingUrls = new Set(existingMedia.map((m) => m.url));
+          const missingMedia = INITIAL_MEDIA_ASSETS.filter((asset) => !existingUrls.has(asset.url));
+          if (missingMedia.length > 0) {
+            await db.insert(mediaAssets).values(missingMedia);
           }
         }
 
@@ -257,7 +334,7 @@ export async function ensureSeeded(): Promise<void> {
     } catch (error) {
       seedPromise = null;
       console.error('Database seed error:', error);
-      throw new Error('Failed to initialize application content.', { cause: error });
+      throw new Error(formatSafeDbError('Failed to initialize application content.', error), { cause: error });
     }
   })();
   return seedPromise;
@@ -538,7 +615,7 @@ export async function getAdminDashboardBundle() {
     };
   } catch (error) {
     console.error('getAdminDashboardBundle failed:', error);
-    throw new Error('Failed to load administrator dashboard data.', { cause: error });
+    throw new Error(formatSafeDbError('Failed to load administrator dashboard data.', error), { cause: error });
   }
 }
 

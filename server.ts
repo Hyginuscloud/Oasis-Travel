@@ -1286,9 +1286,15 @@ app.post('/api/admin/media/upload', async (req: AuthRequest, res: Response) => {
       }
 
       const safeFilename = `oasis-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${resolved.ext}`;
-      const supabaseRestUrl = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
-      const supabaseServiceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-      const storageBucket = (process.env.SUPABASE_STORAGE_BUCKET || 'oasis-media').trim();
+      const stripQ = (v?: string) => {
+        const t = (v || '').trim();
+        return t.length >= 2 && ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'")))
+          ? t.slice(1, -1).trim()
+          : t;
+      };
+      const supabaseRestUrl = stripQ(process.env.SUPABASE_URL).replace(/\/+$/, '');
+      const supabaseServiceKey = stripQ(process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const storageBucket = stripQ(process.env.SUPABASE_STORAGE_BUCKET) || 'oasis-media';
 
       if (supabaseRestUrl && supabaseServiceKey) {
         const mimeForUpload =
@@ -1651,7 +1657,8 @@ app.delete('/api/admin/admins/:id', async (req: AuthRequest, res: Response) => {
 
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
+    const viteModule = 'vite';
+    const { createServer: createViteServer } = await import(/* @vite-ignore */ viteModule);
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

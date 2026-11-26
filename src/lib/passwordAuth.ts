@@ -2,8 +2,19 @@ import crypto from 'node:crypto';
 
 const EPHEMERAL_FALLBACK_SECRET = crypto.randomBytes(32).toString('hex');
 
+function stripQuotes(val?: string): string {
+  const trimmed = (val || '').trim();
+  if (
+    trimmed.length >= 2 &&
+    ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'")))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 function getSessionSecret(): string {
-  const explicit = process.env.SESSION_SECRET?.trim();
+  const explicit = stripQuotes(process.env.SESSION_SECRET);
   if (explicit) return explicit;
 
   const deploymentEntropy = [
@@ -20,7 +31,8 @@ function getSessionSecret(): string {
     process.env.SQL_PASSWORD,
     process.env.VERCEL_PROJECT_PRODUCTION_URL,
   ]
-    .filter((v): v is string => Boolean(v && v.trim()))
+    .map((v) => stripQuotes(v))
+    .filter(Boolean)
     .join('|');
 
   if (deploymentEntropy) {
