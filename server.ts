@@ -33,8 +33,10 @@ import {
   getAdminDashboardBundle,
   getAllEnquiries,
   getPublicBootstrap,
+  getUploadedFileFromDb,
   hasAnyDashboardSuperAdmin,
   markEnquiryEmailDispatched,
+  saveUploadedFileToDb,
   updateAuthorizedAdmin,
   updateDashboardUserById,
   updateDesignProjectRecord,
@@ -110,6 +112,31 @@ app.use((req, _res, next) => {
 app.use('/api/admin/media/upload', express.json({ limit: '85mb' }));
 app.use(express.json({ limit: '8mb' }));
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
+app.get('/uploads/:filename', async (req: Request, res: Response) => {
+  try {
+    const safeName = path.basename(String(req.params.filename || '')).trim();
+    if (!safeName || !/^[A-Za-z0-9._-]+$/.test(safeName)) {
+      return res.status(404).end();
+    }
+    const diskPath = path.resolve(UPLOADS_DIR, safeName);
+    if (diskPath.startsWith(UPLOADS_DIR + path.sep) && fs.existsSync(diskPath)) {
+      return res.sendFile(diskPath);
+    }
+    const stored = await getUploadedFileFromDb(safeName);
+    if (!stored) {
+      return res.status(404).end();
+    }
+    const buf = Buffer.from(stored.dataBase64, 'base64');
+    res.setHeader('Content-Type', stored.mimeType || 'application/octet-stream');
+    if ((stored.mimeType || '').includes('svg')) {
+      res.setHeader('Content-Security-Policy', 'sandbox');
+    }
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(buf);
+  } catch {
+    res.status(404).end();
+  }
+});
 
 function getRateLimitKey(req: Request): string {
   const xff = req.headers['x-forwarded-for'];
@@ -273,6 +300,7 @@ ${routes
 // Public content bootstrap
 app.get('/api/public/bootstrap', async (_req: Request, res: Response) => {
   try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     const data = await getPublicBootstrap();
     res.json(data);
   } catch (error: unknown) {
@@ -1198,6 +1226,15 @@ app.delete('/api/admin/faqs/:id', async (req: AuthRequest, res: Response) => {
 });
 
 // Site Settings & Business Hours
+const SETTINGS_IMAGE_KEYS = new Set([
+  'logoUrl',
+  'heroImageUrl',
+  'conciergeImageUrl',
+  'honeymoonImageUrl',
+  'desertImageUrl',
+  'europeImageUrl',
+]);
+
 app.put('/api/admin/settings', async (req: AuthRequest, res: Response) => {
   try {
     const incoming = req.body?.settings;
@@ -1207,7 +1244,13 @@ app.put('/api/admin/settings', async (req: AuthRequest, res: Response) => {
     const clean: Record<string, string> = {};
     for (const [k, v] of Object.entries(incoming)) {
       if (typeof k === 'string' && typeof v === 'string' && k.length <= 64) {
-        clean[k] = v.slice(0, 2000);
+        const isDataImage = /^data:image\//i.test(v.trim());
+        const maxLen = isDataImage ? 4_500_000 : 10_000;
+        const normalizedVal =
+          SETTINGS_IMAGE_KEYS.has(k) && v.trim()
+            ? normalizeExternalMediaUrl(v)
+            : v;
+        clean[k] = normalizedVal.slice(0, maxLen);
       }
     }
     await upsertSiteSettings(clean);
@@ -1323,9 +1366,15 @@ app.post('/api/admin/media/upload', async (req: AuthRequest, res: Response) => {
       const supabaseServiceKey = stripQ(process.env.SUPABASE_SERVICE_ROLE_KEY);
       const storageBucket = stripQ(process.env.SUPABASE_STORAGE_BUCKET) || 'oasis-media';
 
+      const mimeForUpload =
+        rawMime ||
+        (detectedKind === 'video'
+          ? `video/${resolved.ext.slice(1)}`
+          : resolved.ext === '.svg'
+            ? 'image/svg+xml'
+            : `image/${resolved.ext === '.jpg' ? 'jpeg' : resolved.ext.slice(1)}`);
+
       if (supabaseRestUrl && supabaseServiceKey) {
-        const mimeForUpload =
-          rawMime || (detectedKind === 'video' ? `video/${resolved.ext.slice(1)}` : `image/${resolved.ext === '.jpg' ? 'jpeg' : resolved.ext.slice(1)}`);
         const uploadRes = await fetch(
           `${supabaseRestUrl}/storage/v1/object/${encodeURIComponent(storageBucket)}/${encodeURIComponent(safeFilename)}`,
           {
@@ -1344,18 +1393,32 @@ app.post('/api/admin/media/upload', async (req: AuthRequest, res: Response) => {
         }
       }
 
+      // Persist uploaded binary in PostgreSQL so /uploads/:filename works reliably across all Vercel lambdas
+      if (!finalUrl && buffer.length <= 8 * 1024 * 1024) {
+        const storedInDb = await saveUploadedFileToDb(safeFilename, mimeForUpload, buffer.toString('base64'));
+        if (storedInDb) {
+          finalUrl = `/uploads/${safeFilename}`;
+        }
+      }
+
       if (!finalUrl && isVercel && detectedKind === 'image' && ['.png', '.jpg', '.webp', '.gif'].includes(resolved.ext) && buffer.length <= 2 * 1024 * 1024) {
         const safeMime = resolved.ext === '.jpg' ? 'image/jpeg' : `image/${resolved.ext.slice(1)}`;
         finalUrl = `data:${safeMime};base64,${buffer.toString('base64')}`;
       }
 
-      if (!finalUrl) {
+      if (!finalUrl || !isVercel) {
         const resolvedPath = path.resolve(UPLOADS_DIR, safeFilename);
         if (!resolvedPath.startsWith(UPLOADS_DIR + path.sep)) {
           return res.status(400).json({ error: 'Invalid file destination.' });
         }
-        fs.writeFileSync(resolvedPath, buffer);
-        finalUrl = `/uploads/${safeFilename}`;
+        try {
+          fs.writeFileSync(resolvedPath, buffer);
+          if (!finalUrl) {
+            finalUrl = `/uploads/${safeFilename}`;
+          }
+        } catch (writeErr) {
+          if (!finalUrl) throw writeErr;
+        }
       }
     } else if (externalUrl && isSafeMediaUrl(String(externalUrl))) {
       finalUrl = normalizeExternalMediaUrl(String(externalUrl));

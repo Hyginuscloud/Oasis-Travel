@@ -170,6 +170,13 @@ CREATE TABLE IF NOT EXISTS dashboard_users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS uploaded_files (
+  filename TEXT PRIMARY KEY,
+  mime_type TEXT NOT NULL,
+  data_base64 TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Enable Row Level Security (RLS) so PostgREST anon keys cannot directly read PII tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE authorized_admins ENABLE ROW LEVEL SECURITY;
@@ -184,4 +191,4 @@ ALTER TABLE media_assets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE design_projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE special_offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dashboard_users ENABLE ROW LEVEL SECURITY;
-
+ALTER TABLE uploaded_files ENABLE ROW LEVEL SECURITY;

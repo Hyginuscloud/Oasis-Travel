@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useState } from 'react';
 import { Compass } from 'lucide-react';
+import { normalizeImageDisplayUrl } from '../lib/mediaEmbeds';
 
 export function BrandMark({
   className = 'w-9 h-9',
@@ -14,15 +15,16 @@ export function BrandMark({
   const gradBg = `oasis-ng-${uid}`;
   const gradGold = `oasis-gd-${uid}`;
   const [imgFailed, setImgFailed] = useState(false);
+  const resolvedLogoUrl = logoUrl ? normalizeImageDisplayUrl(logoUrl) : '';
 
   useEffect(() => {
     setImgFailed(false);
-  }, [logoUrl]);
+  }, [resolvedLogoUrl]);
 
-  if (logoUrl && logoUrl.trim() && !imgFailed) {
+  if (resolvedLogoUrl && !imgFailed) {
     return (
       <img
-        src={logoUrl}
+        src={resolvedLogoUrl}
         alt={alt}
         referrerPolicy="no-referrer"
         onError={() => setImgFailed(true)}
@@ -90,12 +92,13 @@ interface SafeImageProps {
 
 export function SafeImage({ src, alt, className = '', fallbackTitle }: SafeImageProps) {
   const [failed, setFailed] = useState(false);
+  const resolvedSrc = src ? normalizeImageDisplayUrl(src) : '';
 
   useEffect(() => {
     setFailed(false);
-  }, [src]);
+  }, [resolvedSrc]);
 
-  if (failed || !src) {
+  if (failed || !resolvedSrc) {
     return (
       <div
         className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#10243B] via-[#193B59] to-[#234B6E] text-[#FAF8F3] p-6 text-center ${className}`}
@@ -112,7 +115,7 @@ export function SafeImage({ src, alt, className = '', fallbackTitle }: SafeImage
 
   return (
     <img
-      src={src}
+      src={resolvedSrc}
       alt={alt}
       referrerPolicy="no-referrer"
       loading="lazy"

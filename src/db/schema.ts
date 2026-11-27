@@ -171,3 +171,9 @@ export const specialOffers = pgTable('special_offers', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const uploadedFiles = pgTable('uploaded_files', {
+  filename: text('filename').primaryKey(),
+  mimeType: text('mime_type').notNull(),
+  dataBase64: text('data_base64').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

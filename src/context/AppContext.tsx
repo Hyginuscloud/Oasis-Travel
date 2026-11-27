@@ -62,7 +62,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshPublicData = useCallback(async () => {
     try {
       setError(null);
-      const res = await fetch('/api/public/bootstrap');
+      const res = await fetch('/api/public/bootstrap', { cache: 'no-store' });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Unable to load Oasis travel catalogue.');

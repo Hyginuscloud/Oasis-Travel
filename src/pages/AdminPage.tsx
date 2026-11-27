@@ -231,6 +231,8 @@ export function AdminPage() {
 
   // Site settings draft
   const [settingsDraft, setSettingsDraft] = useState<Record<string, string>>({});
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsFeedback, setSettingsFeedback] = useState<{ type: 'ok' | 'error'; msg: string } | null>(null);
 
   // Security & Managers state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -300,8 +302,25 @@ export function AdminPage() {
         },
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Request failed');
+        const text = await res.text().catch(() => '');
+        let parsedError = '';
+        try {
+          const body = JSON.parse(text) as { error?: string };
+          parsedError = body.error || '';
+        } catch {
+          // non-JSON response
+        }
+        const snippet = text
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 180);
+        throw new Error(
+          parsedError ||
+            (res.status === 413
+              ? 'Uploaded payload is too large for one request. Upload a smaller image or paste an image URL.'
+              : `Request failed (HTTP ${res.status})${snippet ? `: ${snippet}` : ''}`)
+        );
       }
       return res;
     },
@@ -979,17 +998,63 @@ export function AdminPage() {
     }
   }
 
+  async function persistLogoUrl(nextLogoUrl: string, successMessage: string) {
+    setSavingSettings(true);
+    setSettingsFeedback(null);
+    try {
+      const res = await apiFetch('/api/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ settings: { logoUrl: nextLogoUrl } }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { settings?: Record<string, string> };
+      const savedLogo = json.settings?.logoUrl !== undefined ? json.settings.logoUrl : nextLogoUrl;
+      setSettingsDraft((prev) => ({ ...prev, logoUrl: savedLogo }));
+      setBundle((prev) =>
+        prev ? { ...prev, settings: { ...prev.settings, logoUrl: savedLogo } } : prev
+      );
+      setSettingsFeedback({ type: 'ok', msg: successMessage });
+      notify(successMessage);
+      await refreshPublicData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update website logo.';
+      setSettingsFeedback({ type: 'error', msg });
+      notify(msg);
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
+    setSavingSettings(true);
+    setSettingsFeedback(null);
     try {
-      await apiFetch('/api/admin/settings', {
+      const payloadSettings: Record<string, string> = {};
+      for (const [key, val] of Object.entries(settingsDraft)) {
+        if (typeof val === 'string') {
+          payloadSettings[key] = val;
+        }
+      }
+      const res = await apiFetch('/api/admin/settings', {
         method: 'PUT',
-        body: JSON.stringify({ settings: settingsDraft }),
+        body: JSON.stringify({ settings: payloadSettings }),
       });
-      notify('Frontend content, logo, social links, and settings updated.');
+      const json = (await res.json().catch(() => ({}))) as { settings?: Record<string, string> };
+      if (json.settings) {
+        setSettingsDraft((prev) => ({ ...prev, ...json.settings }));
+        setLatestUpdateQuick(json.settings.latestUpdate ?? payloadSettings.latestUpdate ?? '');
+        setHoursWeekdayQuick(json.settings.hoursWeekday ?? payloadSettings.hoursWeekday ?? '');
+      }
+      const successMsg = 'All website changes (site content, logo & links) published live!';
+      setSettingsFeedback({ type: 'ok', msg: successMsg });
+      notify(successMsg);
       await Promise.all([loadDashboard(), refreshPublicData()]);
     } catch (err: unknown) {
-      notify(err instanceof Error ? err.message : 'Failed to update settings.');
+      const msg = err instanceof Error ? err.message : 'Failed to update settings.';
+      setSettingsFeedback({ type: 'error', msg });
+      notify(msg);
+    } finally {
+      setSavingSettings(false);
     }
   }
 
@@ -2464,14 +2529,17 @@ export function AdminPage() {
                               {uploadingField === 'logoUrl' ? 'Uploading Logo...' : 'Upload Website Logo'}
                               <input
                                 type="file"
-                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
                                 className="hidden"
                                 onChange={async (e) => {
-                                  const f = e.target.files?.[0];
+                                  const inputEl = e.currentTarget;
+                                  const f = inputEl.files?.[0];
                                   if (!f) return;
                                   const url = await uploadAssetFile(f, 'logoUrl', 'Website Logo', 'Branding', 'image');
+                                  inputEl.value = '';
                                   if (url) {
                                     setSettingsDraft((prev) => ({ ...prev, logoUrl: url }));
+                                    await persistLogoUrl(url, 'Website logo uploaded and published to live header & footer!');
                                   }
                                 }}
                               />
@@ -2479,8 +2547,12 @@ export function AdminPage() {
                             {settingsDraft.logoUrl && (
                               <button
                                 type="button"
-                                onClick={() => setSettingsDraft((prev) => ({ ...prev, logoUrl: '' }))}
-                                className="px-4 py-2 min-h-[40px] rounded-xl border border-[#10243B]/15 bg-white text-xs font-semibold text-[#475569] hover:text-red-600 cursor-pointer"
+                                disabled={savingSettings}
+                                onClick={async () => {
+                                  setSettingsDraft((prev) => ({ ...prev, logoUrl: '' }));
+                                  await persistLogoUrl('', 'Reset website logo to the default Oasis crest.');
+                                }}
+                                className="px-4 py-2 min-h-[40px] rounded-xl border border-[#10243B]/15 bg-white text-xs font-semibold text-[#475569] hover:text-red-600 cursor-pointer disabled:opacity-60"
                               >
                                 Reset to Default Crest
                               </button>
@@ -2547,9 +2619,11 @@ export function AdminPage() {
                                   accept="image/jpeg,image/png,image/webp,image/gif"
                                   className="hidden"
                                   onChange={async (e) => {
-                                    const f = e.target.files?.[0];
+                                    const inputEl = e.currentTarget;
+                                    const f = inputEl.files?.[0];
                                     if (!f) return;
                                     const u = await uploadAssetFile(f, imgField.key, imgField.label, 'Frontend Images', 'image');
+                                    inputEl.value = '';
                                     if (u) setSettingsDraft((prev) => ({ ...prev, [imgField.key]: u }));
                                   }}
                                 />
@@ -2724,12 +2798,25 @@ export function AdminPage() {
                         />
                       </div>
 
+                      {settingsFeedback && (
+                        <div
+                          className={`px-4 py-3 rounded-xl border text-xs font-semibold ${
+                            settingsFeedback.type === 'ok'
+                              ? 'bg-[#15803D]/10 border-[#15803D]/30 text-[#15803D]'
+                              : 'bg-[#DC2626]/10 border-[#DC2626]/30 text-[#DC2626]'
+                          }`}
+                        >
+                          {settingsFeedback.msg}
+                        </div>
+                      )}
+
                       <div className="pt-2">
                         <button
                           type="submit"
-                          className="px-7 py-3 min-h-[44px] rounded-xl bg-[#10243B] text-white text-sm font-semibold shadow-sm hover:bg-[#193B59] cursor-pointer"
+                          disabled={savingSettings || uploadingField !== null}
+                          className="px-7 py-3 min-h-[44px] rounded-xl bg-[#10243B] text-white text-sm font-semibold shadow-sm hover:bg-[#193B59] cursor-pointer disabled:opacity-60"
                         >
-                          Publish All Website Changes
+                          {savingSettings ? 'Publishing All Website Changes...' : 'Publish All Website Changes'}
                         </button>
                       </div>
                     </div>

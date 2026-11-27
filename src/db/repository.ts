@@ -1,4 +1,4 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { asc, desc, eq, notLike, sql } from 'drizzle-orm';
 import { db, getDbConfigDiagnosticHint, pool } from './index.ts';
 import {
   authorizedAdmins,
@@ -13,6 +13,7 @@ import {
   siteSettings,
   specialOffers,
   testimonials,
+  uploadedFiles,
   users,
 } from './schema.ts';
 import {
@@ -34,6 +35,7 @@ import {
 
 let seedPromise: Promise<void> | null = null;
 let dashboardTablePromise: Promise<void> | null = null;
+let uploadedFilesTablePromise: Promise<void> | null = null;
 const SEED_IMAGE_SYNC_VERSION = '3';
 
 function formatSafeDbError(prefix: string, error: unknown): string {
@@ -187,7 +189,10 @@ export async function ensureSeeded(): Promise<void> {
         .onConflictDoNothing();
 
       // Seed site settings if empty (and backfill any newly introduced keys in one batch)
-      const existingSettings = await db.select().from(siteSettings);
+      const existingSettings = await db
+        .select()
+        .from(siteSettings)
+        .where(notLike(siteSettings.key, '__file__:%'));
       const existingSettingKeys = new Set(existingSettings.map((s) => s.key));
       const missingSettingRows = Object.entries(INITIAL_SITE_SETTINGS)
         .filter(([key]) => !existingSettingKeys.has(key))
@@ -420,7 +425,7 @@ export async function getPublicBootstrap() {
       projectRows,
       offerRows,
     ] = await Promise.all([
-      db.select().from(siteSettings),
+      db.select().from(siteSettings).where(notLike(siteSettings.key, '__file__:%')),
       db.select().from(services).orderBy(asc(services.sortOrder), asc(services.id)),
       db.select().from(destinations).orderBy(asc(destinations.sortOrder), asc(destinations.id)),
       db.select().from(packages).orderBy(asc(packages.sortOrder), asc(packages.id)),
@@ -579,7 +584,7 @@ export async function getAdminDashboardBundle() {
       db.select().from(services).orderBy(asc(services.sortOrder), asc(services.id)),
       db.select().from(testimonials).orderBy(desc(testimonials.id)),
       db.select().from(faqs).orderBy(asc(faqs.sortOrder), asc(faqs.id)),
-      db.select().from(siteSettings),
+      db.select().from(siteSettings).where(notLike(siteSettings.key, '__file__:%')),
       db.select().from(mediaAssets).orderBy(desc(mediaAssets.id)),
       db.select().from(authorizedAdmins).orderBy(asc(authorizedAdmins.id)),
       db.select().from(designProjects).orderBy(asc(designProjects.sortOrder), desc(designProjects.id)),
@@ -882,18 +887,123 @@ export async function deleteFaqRecord(id: number) {
 
 export async function upsertSiteSettings(entries: Record<string, string>) {
   try {
-    for (const [key, value] of Object.entries(entries)) {
-      await db
-        .insert(siteSettings)
-        .values({ key, value, updatedAt: new Date() })
-        .onConflictDoUpdate({
-          target: siteSettings.key,
-          set: { value, updatedAt: new Date() },
-        });
-    }
+    const rows = Object.entries(entries).map(([key, value]) => ({
+      key,
+      value,
+      updatedAt: new Date(),
+    }));
+    if (rows.length === 0) return;
+
+    await db
+      .insert(siteSettings)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: siteSettings.key,
+        set: {
+          value: sql`excluded.value`,
+          updatedAt: sql`excluded.updated_at`,
+        },
+      });
   } catch (error) {
     console.error('upsertSiteSettings failed:', error);
-    throw new Error('Failed to save site settings.', { cause: error });
+    throw new Error(formatSafeDbError('Failed to save site settings.', error), { cause: error });
+  }
+}
+
+export async function ensureUploadedFilesTable(): Promise<void> {
+  if (uploadedFilesTablePromise) return uploadedFilesTablePromise;
+  uploadedFilesTablePromise = (async () => {
+    try {
+      await pool.query('SELECT 1 FROM uploaded_files LIMIT 1');
+    } catch (checkError: unknown) {
+      const code = (checkError as { code?: string })?.code;
+      if (code === '42P01') {
+        try {
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS uploaded_files (
+              filename TEXT PRIMARY KEY,
+              mime_type TEXT NOT NULL,
+              data_base64 TEXT NOT NULL,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+          `);
+        } catch (createError: unknown) {
+          uploadedFilesTablePromise = null;
+          throw createError;
+        }
+      } else {
+        uploadedFilesTablePromise = null;
+        throw checkError;
+      }
+    }
+  })();
+  return uploadedFilesTablePromise;
+}
+
+export async function saveUploadedFileToDb(
+  filename: string,
+  mimeType: string,
+  dataBase64: string
+): Promise<boolean> {
+  try {
+    await ensureUploadedFilesTable();
+    await db
+      .insert(uploadedFiles)
+      .values({ filename, mimeType, dataBase64, createdAt: new Date() })
+      .onConflictDoUpdate({
+        target: uploadedFiles.filename,
+        set: { mimeType, dataBase64, createdAt: new Date() },
+      });
+    return true;
+  } catch (primaryErr) {
+    // Fallback to existing site_settings table if uploaded_files does not exist or CREATE TABLE lacks permissions
+    try {
+      const packed = `data:${mimeType};base64,${dataBase64}`;
+      await db
+        .insert(siteSettings)
+        .values({ key: `__file__:${filename}`, value: packed, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: siteSettings.key,
+          set: { value: packed, updatedAt: new Date() },
+        });
+      return true;
+    } catch (fallbackErr) {
+      console.warn('saveUploadedFileToDb failed completely:', primaryErr, fallbackErr);
+      return false;
+    }
+  }
+}
+
+export async function getUploadedFileFromDb(
+  filename: string
+): Promise<{ mimeType: string; dataBase64: string } | null> {
+  try {
+    const rows = await db
+      .select({ mimeType: uploadedFiles.mimeType, dataBase64: uploadedFiles.dataBase64 })
+      .from(uploadedFiles)
+      .where(eq(uploadedFiles.filename, filename))
+      .limit(1);
+    if (rows[0]) return rows[0];
+  } catch {
+    // uploaded_files table may not exist; check site_settings fallback
+  }
+  try {
+    const fallbackRows = await db
+      .select({ value: siteSettings.value })
+      .from(siteSettings)
+      .where(eq(siteSettings.key, `__file__:${filename}`))
+      .limit(1);
+    const val = fallbackRows[0]?.value || '';
+    const idx = val.indexOf(';base64,');
+    if (val.startsWith('data:') && idx > 5) {
+      return {
+        mimeType: val.slice(5, idx),
+        dataBase64: val.slice(idx + 8),
+      };
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 

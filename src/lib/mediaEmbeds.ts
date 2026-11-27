@@ -6,7 +6,7 @@ export function normalizeExternalMediaUrl(rawUrl: string): string {
   const iframeSrcMatch = /src=["']([^"']+)["']/i.exec(trimmed);
   const candidate = (iframeSrcMatch ? iframeSrcMatch[1] : trimmed).trim();
 
-  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=\s]+$/i.test(candidate)) {
+  if (/^data:image\/(?:png|jpe?g|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=\s]+$/i.test(candidate)) {
     return candidate.replace(/\s+/g, '');
   }
   if (candidate.startsWith('/src/assets/') || candidate.startsWith('/uploads/')) {
@@ -24,10 +24,31 @@ export function normalizeExternalMediaUrl(rawUrl: string): string {
   return candidate;
 }
 
+export function normalizeImageDisplayUrl(rawUrl: string): string {
+  const normalized = normalizeExternalMediaUrl(rawUrl);
+  if (!normalized) return '';
+  try {
+    if (/^https?:\/\//i.test(normalized)) {
+      const parsed = new URL(normalized);
+      const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+      if (host === 'drive.google.com') {
+        const dMatch = /\/d\/([A-Za-z0-9_-]{10,120})/.exec(parsed.pathname);
+        const fileId = dMatch?.[1] || parsed.searchParams.get('id') || '';
+        if (/^[A-Za-z0-9_-]{10,120}$/.test(fileId)) {
+          return `https://lh3.googleusercontent.com/d/${fileId}`;
+        }
+      }
+    }
+  } catch {
+    // keep normalized URL
+  }
+  return normalized;
+}
+
 export function isSafeHttpOrLocalUrl(rawUrl: string): boolean {
   const normalized = normalizeExternalMediaUrl(rawUrl);
   if (!normalized) return false;
-  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(normalized)) return true;
+  if (/^data:image\/(?:png|jpe?g|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=]+$/i.test(normalized)) return true;
   if (normalized.startsWith('/src/assets/') || normalized.startsWith('/uploads/')) return true;
   try {
     const parsed = new URL(normalized);
