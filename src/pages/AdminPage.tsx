@@ -92,6 +92,7 @@ interface AuthStatusInfo {
 export function AdminPage() {
   const navigate = useNavigate();
   const {
+    data: publicData,
     authUser,
     passwordUser,
     isAuthenticated,
@@ -373,6 +374,43 @@ export function AdminPage() {
     });
   }
 
+  function optimizeImageDataUrlForUpload(
+    rawDataUrl: string,
+    file: File,
+    maxDimension: number
+  ): Promise<string> {
+    return new Promise((resolve) => {
+      if (file.type === 'image/svg+xml' || file.type === 'image/gif' || file.size <= 1.5 * 1024 * 1024) {
+        resolve(rawDataUrl);
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxDimension / Math.max(img.width || 1, img.height || 1));
+          const targetW = Math.max(1, Math.round(img.width * scale));
+          const targetH = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(rawDataUrl);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, targetW, targetH);
+          const outMime = file.type === 'image/png' ? 'image/webp' : 'image/jpeg';
+          const compressed = canvas.toDataURL(outMime, 0.86);
+          resolve(compressed.length < rawDataUrl.length ? compressed : rawDataUrl);
+        } catch {
+          resolve(rawDataUrl);
+        }
+      };
+      img.onerror = () => resolve(rawDataUrl);
+      img.src = rawDataUrl;
+    });
+  }
+
   async function uploadAssetFile(
     file: File,
     fieldKey: string,
@@ -381,15 +419,19 @@ export function AdminPage() {
     kind: 'image' | 'video',
     skipLibrary = true
   ): Promise<string | null> {
-    const maxBytes = kind === 'video' ? 50 * 1024 * 1024 : 8 * 1024 * 1024;
+    const maxBytes = kind === 'video' ? 50 * 1024 * 1024 : 15 * 1024 * 1024;
     if (file.size > maxBytes) {
-      const msg = kind === 'video' ? 'Please choose a video up to 50 MB.' : 'Please choose an image up to 8 MB.';
+      const msg = kind === 'video' ? 'Please choose a video up to 50 MB.' : 'Please choose an image up to 15 MB.';
       notify(msg);
       return null;
     }
     setUploadingField(fieldKey);
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const rawDataUrl = await readFileAsDataUrl(file);
+      const dataUrl =
+        kind === 'image'
+          ? await optimizeImageDataUrlForUpload(rawDataUrl, file, fieldKey === 'logoUrl' ? 900 : 1800)
+          : rawDataUrl;
       const res = await apiFetch('/api/admin/media/upload', {
         method: 'POST',
         body: JSON.stringify({
@@ -1143,7 +1185,7 @@ export function AdminPage() {
         <div className="min-h-screen bg-[#10243B] flex items-center justify-center p-4 sm:p-6">
           <div className="w-full max-w-md bg-white border border-[#10243B]/15 rounded-2xl p-7 sm:p-8 space-y-6 shadow-2xl">
             <div className="flex items-center gap-3">
-              <BrandMark className="w-11 h-11 shrink-0" />
+              <BrandMark logoUrl={publicData.settings.logoUrl} className="w-11 h-11 shrink-0" />
               <div>
                 <h1 className="font-display text-2xl font-bold text-[#10243B]">
                   Oasis Admin Portal
