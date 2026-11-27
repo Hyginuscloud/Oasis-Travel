@@ -20,12 +20,19 @@ function stripEnvQuotes(val?: string): string {
 
 export const createPool = () => {
   if (!global._postgresPool) {
+    const candidates = [
+      stripEnvQuotes(process.env.SUPABASE_DB_URL),
+      stripEnvQuotes(process.env.POSTGRES_URL),
+      stripEnvQuotes(process.env.POSTGRES_PRISMA_URL),
+      stripEnvQuotes(process.env.DATABASE_URL),
+      stripEnvQuotes(process.env.POSTGRES_URL_NON_POOLING),
+    ].filter(Boolean);
+
     const supabaseUrl =
-      stripEnvQuotes(process.env.SUPABASE_DB_URL) ||
-      stripEnvQuotes(process.env.POSTGRES_URL) ||
-      stripEnvQuotes(process.env.POSTGRES_PRISMA_URL) ||
-      stripEnvQuotes(process.env.POSTGRES_URL_NON_POOLING) ||
-      stripEnvQuotes(process.env.DATABASE_URL);
+      candidates.find((u) => /\.pooler\.supabase\.com/i.test(u)) ||
+      candidates.find((u) => !/@db\.[a-z0-9]+\.supabase\.co/i.test(u)) ||
+      candidates[0] ||
+      '';
     const supabaseHost = stripEnvQuotes(process.env.SUPABASE_DB_HOST || process.env.POSTGRES_HOST);
     const useSupabaseHost = Boolean(supabaseHost);
 
