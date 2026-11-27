@@ -1,5 +1,5 @@
 import { asc, desc, eq } from 'drizzle-orm';
-import { db, pool } from './index.ts';
+import { db, getDbConfigDiagnosticHint, pool } from './index.ts';
 import {
   authorizedAdmins,
   dashboardUsers,
@@ -48,8 +48,13 @@ function formatSafeDbError(prefix: string, error: unknown): string {
   const host = errObj.cause?.hostname || errObj.hostname || '';
   const cleaned = rootMsg.replace(/postgresql:\/\/[^@\s]+@/gi, 'postgresql://***@').trim();
 
+  const hint = getDbConfigDiagnosticHint();
+
   if (rootCode === '28P01' || /password authentication failed/i.test(cleaned)) {
-    return `${prefix} (Supabase database password authentication failed — verify SUPABASE_DB_URL password.)`;
+    return `${prefix} (${hint || 'Supabase database password authentication failed — check SUPABASE_DB_URL in Vercel (ensure no [ ] brackets around password) or reset your password in Supabase → Project Settings → Database.'})`;
+  }
+  if (/tenant or user not found/i.test(cleaned)) {
+    return `${prefix} (${hint || 'Supabase pooler rejected username — ensure the Pooler URI username is postgres.<PROJECT_REF> (for example postgres.ppizjqcqjadxbacnyeth) and matches the region host.'})`;
   }
   if ((rootCode === 'ENETUNREACH' || rootCode === 'ENOTFOUND' || rootCode === 'EAI_AGAIN') && /supabase\.co/i.test(host + cleaned)) {
     return `${prefix} (Cannot reach Supabase host ${host || ''}. On Vercel, use the Transaction Pooler URI *.pooler.supabase.com:6543 instead of Direct Connection db.*.supabase.co:5432.)`;
