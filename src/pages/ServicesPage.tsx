@@ -86,22 +86,22 @@ export function ServicesPage() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(201,164,92,0.14),transparent_58%)]"
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#FF5252]">
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-white">
             <span className="w-8 h-[1px] bg-[#C9A45C]" aria-hidden="true" />
             <span>Service Directory · Dubai &amp; Global</span>
           </div>
 
-          <h1 className="font-display font-bold tracking-tight leading-[1.15] text-2xl sm:text-[clamp(1.3rem,2.85vw,2.6rem)] sm:whitespace-nowrap text-white">
+          <h1 className="font-display font-bold tracking-tight leading-[1.15] text-2xl sm:text-3xl lg:text-[clamp(1.65rem,2.85vw,2.6rem)] lg:whitespace-nowrap text-white">
             Integrated Divisions Supporting Your Journey
           </h1>
 
           <div className="w-20 h-[2px] bg-[#C9A45C]" aria-hidden="true" />
 
-          <p className="text-base md:text-[clamp(0.85rem,1.22vw,1rem)] text-[#FAF8F3]/85 leading-relaxed">
+          <p className="text-base md:text-[clamp(0.85rem,1.22vw,1rem)] text-white leading-relaxed">
             <span className="md:block">
               Every division is built around transparent communication, careful preparation, and direct consultant coordination in Dubai.
             </span>{' '}
-            <span className="md:block text-[#FF5252] font-medium mt-1">
+            <span className="md:block text-white font-medium mt-1">
               Select a category below, inspect any photo in full, or enquire for tailored support.
             </span>
           </p>
@@ -150,7 +150,7 @@ export function ServicesPage() {
                       isSelected ? 'bg-[#193B59]' : 'hover:bg-[#193B59]/80'
                     }`}
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#FF5252]">{item.num}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white">{item.num}</p>
                     <p className="text-xs sm:text-sm font-medium text-white leading-snug">{item.title}</p>
                   </button>
                 );
@@ -276,27 +276,27 @@ export function ServicesPage() {
                             alt={`${service.title} — ${service.category}`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#10243B]/80 via-[#10243B]/25 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#091524]/92 via-[#091524]/40 to-transparent" />
 
                           <div className="absolute top-3 left-3 flex items-center gap-2">
-                            <span className="px-2.5 py-1 rounded-md bg-[#10243B]/90 text-[#FF5252] text-[11px] font-semibold uppercase tracking-wider shadow-xs">
+                            <span className="px-2.5 py-1 rounded-md bg-[#091524]/92 border border-[#F59E0B]/45 text-[#F59E0B] text-[11px] font-bold uppercase tracking-wider shadow-md [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
                               Division {service.code}
                             </span>
                           </div>
 
                           <span
                             aria-hidden="true"
-                            className="absolute top-3 right-3 w-9 h-9 rounded-lg bg-[#10243B]/85 text-[#FF5252] shadow-xs flex items-center justify-center opacity-85 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-3 right-3 w-9 h-9 rounded-lg bg-[#091524]/90 border border-[#F59E0B]/40 text-[#F59E0B] shadow-md flex items-center justify-center opacity-95 group-hover:opacity-100 transition-opacity"
                           >
                             <Maximize2 className="w-4 h-4" />
                           </span>
 
-                          <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-white">
-                            <span className="text-xs font-medium text-[#FF5252] truncate pr-2">
+                          <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2">
+                            <span className="text-xs sm:text-sm font-bold text-[#F59E0B] truncate pr-2 [text-shadow:0_2px_6px_rgba(0,0,0,0.95)]">
                               {service.category}
                             </span>
-                            <div className="w-8 h-8 rounded-lg bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0">
-                              <IconComp className="w-4 h-4 text-[#FF5252]" />
+                            <div className="w-8 h-8 rounded-lg bg-[#091524]/90 border border-[#F59E0B]/40 flex items-center justify-center shrink-0 shadow-sm">
+                              <IconComp className="w-4 h-4 text-[#F59E0B]" />
                             </div>
                           </div>
                         </button>

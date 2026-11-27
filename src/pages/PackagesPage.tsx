@@ -40,23 +40,23 @@ export function PackagesPage() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(201,164,92,0.14),transparent_58%)]"
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#FF5252]">
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-white">
             <span className="w-8 h-[1px] bg-[#C9A45C]" aria-hidden="true" />
             <span>Holiday &amp; Travel Packages</span>
           </div>
 
-          <h1 className="font-display font-bold tracking-tight leading-[1.15] text-xl sm:text-[clamp(1.1rem,2.35vw,2.35rem)] sm:whitespace-nowrap text-white">
+          <h1 className="font-display font-bold tracking-tight leading-[1.15] text-2xl sm:text-3xl lg:text-[clamp(1.65rem,2.35vw,2.35rem)] lg:whitespace-nowrap text-white">
             Thoughtfully Structured Packages, Tailored to Your Dates
           </h1>
 
           <div className="w-20 h-[2px] bg-[#C9A45C]" aria-hidden="true" />
 
-          <p className="text-base md:text-[clamp(0.85rem,1.35vw,1.04rem)] text-[#FAF8F3]/85 leading-relaxed">
-            <span className="md:block md:whitespace-nowrap">
-              Because airline fares and hotel rates vary by season,
+          <p className="text-sm sm:text-base lg:text-[15.5px] xl:text-base text-white leading-relaxed">
+            <span className="lg:block">
+              Because airline fares and hotel rates vary by season, every package is quoted transparently upon enquiry
             </span>{' '}
-            <span className="md:block md:whitespace-nowrap text-[#FF5252] font-medium mt-0.5">
-              every package is quoted transparently upon enquiry rather than locking you into rigid pricing.
+            <span className="lg:block text-white font-medium mt-0.5">
+              rather than locking you into rigid pricing.
             </span>
           </p>
 
@@ -99,7 +99,7 @@ export function PackagesPage() {
                       isSelected ? 'bg-[#193B59]' : 'hover:bg-[#193B59]/80'
                     }`}
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#FF5252]">{item.num}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white">{item.num}</p>
                     <p className="text-xs sm:text-sm font-medium text-white leading-snug">{item.label}</p>
                   </button>
                 );
@@ -223,7 +223,7 @@ export function PackagesPage() {
                       <p className="text-xs text-[#475569]">
                         <strong className="text-[#10243B]">Quotation:</strong> {pkg.priceNote}
                       </p>
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                         <button
                           type="button"
                           onClick={() =>
@@ -249,7 +249,7 @@ export function PackagesPage() {
                               subjectLabel: `Custom Quotation: ${pkg.title}`,
                             })
                           }
-                          className="py-2.5 px-4 min-h-[44px] rounded-xl border border-[#10243B]/20 bg-white text-[#10243B] text-sm font-medium hover:border-[#C9A45C] transition-colors cursor-pointer"
+                          className="w-full sm:w-auto py-2.5 px-4 min-h-[44px] rounded-xl border border-[#10243B]/20 bg-white text-[#10243B] text-sm font-medium hover:border-[#C9A45C] transition-colors cursor-pointer"
                         >
                           Custom Quote
                         </button>

@@ -102,7 +102,7 @@ export function StoryPage() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(201,164,92,0.14),transparent_58%)]"
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-[#FF5252]">
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-white">
             <span className="w-8 h-[1px] bg-[#C9A45C]" aria-hidden="true" />
             <span>Our Story · Dubai &amp; Global Advisory</span>
           </div>
@@ -111,10 +111,10 @@ export function StoryPage() {
             {!s.storyHeroHeadline ||
             s.storyHeroHeadline.trim() === 'From Helping First-Time Visitors Experience Dubai to Guiding Global Journeys' ? (
               <>
-                <span className="block text-2xl sm:text-[clamp(1.2rem,2.75vw,2.55rem)] sm:whitespace-nowrap text-white">
+                <span className="block text-2xl sm:text-3xl lg:text-[clamp(1.65rem,2.6vw,2.55rem)] lg:whitespace-nowrap text-white">
                   From Helping First-Time Visitors Experience Dubai
                 </span>
-                <span className="block mt-1 text-2xl sm:text-[clamp(1.2rem,2.75vw,2.55rem)] text-[#FF5252]">
+                <span className="block mt-1 text-2xl sm:text-3xl lg:text-[clamp(1.65rem,2.6vw,2.55rem)] text-white">
                   to Guiding Global Journeys
                 </span>
               </>
@@ -127,16 +127,16 @@ export function StoryPage() {
 
           <div className="w-20 h-[2px] bg-[#C9A45C]" aria-hidden="true" />
 
-          <p className="text-base md:text-[clamp(0.86rem,1.35vw,1.0625rem)] text-[#FAF8F3]/85 leading-relaxed">
+          <p className="text-sm sm:text-base lg:text-[15.5px] xl:text-base text-white leading-relaxed">
             {!s.storyHeroSubtitle ||
             s.storyHeroSubtitle.trim() ===
               'Every journey begins with an aspiration—whether a family holiday, a romantic honeymoon, an academic goal, or an entrepreneurial step into a new market.' ? (
               <>
-                <span className="md:block md:whitespace-nowrap">
-                  Every journey begins with an aspiration—whether a family holiday, a romantic honeymoon,
+                <span className="lg:block">
+                  Every journey begins with an aspiration—whether a family holiday, a romantic honeymoon, an academic goal,
                 </span>{' '}
-                <span className="md:block md:whitespace-nowrap text-[#FF5252] font-medium mt-0.5">
-                  an academic goal, or an entrepreneurial step into a new market.
+                <span className="lg:block text-white font-medium mt-0.5">
+                  or an entrepreneurial step into a new market.
                 </span>
               </>
             ) : (
@@ -158,7 +158,7 @@ export function StoryPage() {
               className="inline-flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-xl border border-white/25 bg-white/10 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
             >
               Our Future Vision
-              <ArrowRight className="w-4 h-4 text-[#FF5252]" />
+              <ArrowRight className="w-4 h-4 text-white" />
             </Link>
           </div>
 
@@ -192,9 +192,9 @@ export function StoryPage() {
                 }}
                 className="p-5 text-left space-y-1.5 hover:bg-[#193B59] transition-colors cursor-pointer"
               >
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-[#FF5252]">{item.eyebrow}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-white">{item.eyebrow}</p>
                 <p className="font-display text-lg font-semibold text-white">{item.title}</p>
-                <p className="text-xs text-[#FAF8F3]/75 leading-relaxed">{item.text}</p>
+                <p className="text-xs text-white leading-relaxed">{item.text}</p>
               </button>
             ))}
           </div>
@@ -289,7 +289,7 @@ export function StoryPage() {
               <p className="text-xs font-semibold uppercase tracking-widest text-[#DC2626]">
                 What Our Story Means For You
               </p>
-              <h2 className="font-display text-2xl sm:text-3xl font-semibold text-[#10243B] sm:whitespace-nowrap">
+              <h2 className="font-display text-2xl sm:text-3xl font-semibold text-[#10243B] lg:whitespace-nowrap">
                 Four Principles Shaping Every Consultation
               </h2>
             </div>

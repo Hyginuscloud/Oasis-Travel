@@ -102,7 +102,7 @@ function AppShell() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F3] text-[#10243B]">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F3] text-[#10243B] overflow-x-clip">
       <Header />
       <main className="flex-1">
         <Routes>

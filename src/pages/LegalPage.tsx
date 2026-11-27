@@ -16,14 +16,14 @@ export function LegalPage() {
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl space-y-4">
-            <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#FF5252]">
+            <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-white">
               <span className="w-8 h-[1px] bg-[#C9A45C]" aria-hidden="true" />
               <span>Trust, Compliance &amp; Transparency</span>
             </div>
             <h1 className="font-display text-3xl sm:text-5xl font-bold leading-tight text-white">
               Disclaimers &amp; Legal Policies
             </h1>
-            <p className="text-base text-[#FAF8F3]/85 leading-relaxed">
+            <p className="text-base text-white leading-relaxed">
               Clear standards governing advisory information, client data handling, bookings, and official authority
               boundaries.
             </p>

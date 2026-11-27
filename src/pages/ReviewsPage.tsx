@@ -20,7 +20,7 @@ export function ReviewsPage() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(201,164,92,0.14),transparent_58%)]"
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#FF5252]">
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-white">
             <span className="w-8 h-[1px] bg-[#C9A45C]" aria-hidden="true" />
             <span>Customer Reviews</span>
           </div>
@@ -28,11 +28,11 @@ export function ReviewsPage() {
             Client Experiences &amp; Feedback
           </h1>
           <div className="w-20 h-[2px] bg-[#C9A45C]" aria-hidden="true" />
-          <p className="text-base md:text-[clamp(0.82rem,1.22vw,1.02rem)] text-[#FAF8F3]/85 leading-relaxed">
-            <span className="md:block md:whitespace-nowrap">
+          <p className="text-sm sm:text-base lg:text-[15.5px] xl:text-base text-white leading-relaxed">
+            <span className="lg:block">
               Honest feedback helps travellers choose with confidence. Oasis publishes only authorised client testimonials and
             </span>{' '}
-            <span className="md:block md:whitespace-nowrap text-[#FF5252] font-medium mt-0.5">
+            <span className="lg:block text-white font-medium mt-0.5">
               clearly marks sample development placeholders.
             </span>
           </p>

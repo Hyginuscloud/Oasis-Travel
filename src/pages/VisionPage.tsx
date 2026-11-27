@@ -78,7 +78,7 @@ export function VisionPage() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(201,164,92,0.14),transparent_58%)]"
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-[#FF5252]">
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-white">
             <span className="w-8 h-[1px] bg-[#C9A45C]" aria-hidden="true" />
             <span>Our Vision &amp; Future Roadmap</span>
           </div>
@@ -87,10 +87,10 @@ export function VisionPage() {
             {!s.visionHeroHeadline ||
             s.visionHeroHeadline.trim() === 'Building a Recognised Bridge Between Africa, Dubai & the Wider World' ? (
               <>
-                <span className="block text-2xl sm:text-[clamp(1.18rem,2.6vw,2.5rem)] sm:whitespace-nowrap text-white">
+                <span className="block text-2xl sm:text-3xl lg:text-[clamp(1.65rem,2.6vw,2.5rem)] lg:whitespace-nowrap text-white">
                   Building a Recognised Bridge Between Africa, Dubai &amp;
                 </span>
-                <span className="block mt-1 text-2xl sm:text-[clamp(1.18rem,2.6vw,2.5rem)] text-[#FF5252]">
+                <span className="block mt-1 text-2xl sm:text-3xl lg:text-[clamp(1.65rem,2.6vw,2.5rem)] text-white">
                   the Wider World
                 </span>
               </>
@@ -103,15 +103,15 @@ export function VisionPage() {
 
           <div className="w-20 h-[2px] bg-[#C9A45C]" aria-hidden="true" />
 
-          <p className="text-base md:text-[clamp(0.84rem,1.25vw,1.04rem)] text-[#FAF8F3]/85 leading-relaxed">
+          <p className="text-sm sm:text-base lg:text-[15.5px] xl:text-base text-white leading-relaxed">
             {!s.visionHeroSubtitle ||
             s.visionHeroSubtitle.trim() ===
               'Our roadmap focuses on practical improvements that deliver greater clarity, hospitality quality, and peace of mind for every traveller who trusts Oasis.' ? (
               <>
-                <span className="md:block md:whitespace-nowrap">
+                <span className="lg:block">
                   Our roadmap focuses on practical improvements that deliver greater clarity, hospitality quality, and
                 </span>{' '}
-                <span className="md:block md:whitespace-nowrap text-[#FF5252] font-medium mt-0.5">
+                <span className="lg:block text-white font-medium mt-0.5">
                   peace of mind for every traveller who trusts Oasis.
                 </span>
               </>
@@ -135,7 +135,7 @@ export function VisionPage() {
                 className="inline-flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-xl border border-white/25 bg-white/10 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
               >
                 Explore Our Services
-                <ArrowRight className="w-4 h-4 text-[#FF5252]" />
+                <ArrowRight className="w-4 h-4 text-white" />
               </Link>
               <a
                 href={`https://wa.me/${s.whatsappNumber}?text=${encodeURIComponent(
@@ -152,19 +152,19 @@ export function VisionPage() {
 
             <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-3 border border-white/15 bg-[#193B59]/55 rounded-xl divide-y sm:divide-y-0 sm:divide-x divide-white/15 overflow-hidden">
               <div className="p-4 space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#FF5252]">01 · Reach</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white">01 · Reach</p>
                 <p className="text-xs sm:text-sm font-medium text-white leading-snug">
                   Africa, Dubai &amp; Europe Corridors
                 </p>
               </div>
               <div className="p-4 space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#FF5252]">02 · Stays</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white">02 · Stays</p>
                 <p className="text-xs sm:text-sm font-medium text-white leading-snug">
                   Vetted Hospitality Networks
                 </p>
               </div>
               <div className="p-4 space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#FF5252]">03 · Care</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white">03 · Care</p>
                 <p className="text-xs sm:text-sm font-medium text-white leading-snug">
                   Transparent Digital Support
                 </p>

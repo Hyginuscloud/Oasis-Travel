@@ -102,15 +102,15 @@ export function HomePage() {
             transition={{ duration: 0.45 }}
             className="max-w-4xl space-y-6"
           >
-            <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#FF5252]">
+            <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-white">
               <span className="w-8 h-[1px] bg-[#C9A45C]" aria-hidden="true" />
               <span>{s.heroEyebrow || 'Dubai, United Arab Emirates · International Travel & Tourism Consultancy'}</span>
             </div>
 
-            <h1 className="font-display text-2xl sm:text-5xl lg:text-[clamp(2.35rem,3.8vw,3.5rem)] font-bold leading-[1.12] tracking-tight text-white">
+            <h1 className="font-display text-2xl sm:text-4xl lg:text-[clamp(2.35rem,3.8vw,3.5rem)] font-bold leading-[1.12] tracking-tight text-white">
               {!s.heroHeadline || s.heroHeadline.trim() === 'YOUR WORLD. YOUR JOURNEY. OUR OASIS.' ? (
                 <>
-                  <span className="block sm:whitespace-nowrap">YOUR WORLD. YOUR JOURNEY.</span>
+                  <span className="block lg:whitespace-nowrap">YOUR WORLD. YOUR JOURNEY.</span>
                   <span className="block mt-1">OUR OASIS.</span>
                 </>
               ) : (
@@ -118,11 +118,11 @@ export function HomePage() {
               )}
             </h1>
 
-            <p className="font-display text-lg sm:text-2xl font-medium text-[#FF5252] leading-snug">
+            <p className="font-display text-lg sm:text-2xl font-medium text-white leading-snug">
               {s.heroSubheadline || 'Discover Dubai. Explore Opportunities. Create Unforgettable Memories.'}
             </p>
 
-            <p className="text-base sm:text-lg text-[#FAF8F3]/90 leading-relaxed max-w-2xl">
+            <p className="text-base sm:text-lg font-bold text-white leading-relaxed max-w-2xl">
               {s.heroIntro ||
                 'From unforgettable holidays and romantic honeymoons to international travel, business opportunities, study and relocation guidance, Oasis Travel and Tourism Consultancy helps you organise your next journey with confidence.'}
             </p>
@@ -144,11 +144,11 @@ export function HomePage() {
               </Link>
             </div>
 
-            <div className="pt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[#FAF8F3]/80">
+            <div className="pt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-white">
               <span>{s.location || 'Dubai, United Arab Emirates'}</span>
-              <span aria-hidden="true" className="text-[#DC2626]">·</span>
+              <span aria-hidden="true" className="text-white">·</span>
               <span>{s.hoursWeekday || 'Monday – Saturday: 8:00 AM – 8:00 PM'}</span>
-              <span aria-hidden="true" className="text-[#DC2626]">·</span>
+              <span aria-hidden="true" className="text-white">·</span>
               <span>Personalised Holidays &amp; Transparent Advisory</span>
             </div>
           </motion.div>
@@ -162,7 +162,7 @@ export function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-[#DC2626]">
               {s.exploreEyebrow || 'Explore Oasis Consultancy'}
             </p>
-            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-[clamp(1.05rem,2.15vw,1.95rem)] sm:whitespace-nowrap">
+            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-2xl lg:text-[clamp(1.4rem,2.15vw,1.95rem)] lg:whitespace-nowrap">
               {s.exploreHeading || 'Who We Are, Our Vision, Client Perspectives & Guidance'}
             </h2>
           </div>
@@ -279,7 +279,7 @@ export function HomePage() {
               <p className="text-xs font-semibold uppercase tracking-widest text-[#DC2626]">
                 Special Offers &amp; Seasonal Promotions
               </p>
-              <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-[clamp(1.1rem,2.3vw,2.1rem)] sm:whitespace-nowrap">
+              <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-2xl lg:text-[clamp(1.45rem,2.3vw,2.1rem)] lg:whitespace-nowrap">
                 Curated Dubai Holiday, Honeymoon &amp; Visa Consultancy Offers
               </h2>
               <p className="text-sm text-[#475569] max-w-2xl mx-auto">
@@ -313,7 +313,7 @@ export function HomePage() {
               <p className="text-xs font-semibold uppercase tracking-widest text-[#DC2626]">
                 Design Projects &amp; Media Showcase
               </p>
-              <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-[clamp(1rem,2.15vw,1.95rem)] sm:whitespace-nowrap">
+              <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-2xl lg:text-[clamp(1.4rem,2.15vw,1.95rem)] lg:whitespace-nowrap">
                 Curated Concepts, Visual Itineraries &amp; Destination Previews
               </h2>
               <div className="pt-1">
@@ -352,7 +352,7 @@ export function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-[#DC2626]">
               {s.whyChooseEyebrow || 'Why Choose Oasis'}
             </p>
-            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-[clamp(1.05rem,2.1vw,1.95rem)] sm:whitespace-nowrap">
+            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-2xl lg:text-[clamp(1.4rem,2.1vw,1.95rem)] lg:whitespace-nowrap">
               {s.whyChooseHeading || 'Built on Transparency, Cultural Understanding & Personal Accountability'}
             </h2>
           </div>
@@ -400,7 +400,7 @@ export function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-[#DC2626]">
               {s.popularServicesEyebrow || 'Our Most Popular Services'}
             </p>
-            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-[clamp(1.2rem,2.6vw,2.25rem)] sm:whitespace-nowrap">
+            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-2xl lg:text-[clamp(1.5rem,2.6vw,2.25rem)] lg:whitespace-nowrap">
               {s.popularServicesHeading || 'Comprehensive Travel & Consultancy Solutions'}
             </h2>
             <div className="pt-1">
@@ -518,7 +518,7 @@ export function HomePage() {
               <p className="text-xs font-semibold uppercase tracking-widest text-[#DC2626]">
                 {s.discoverEyebrow || 'Discover Dubai & Beyond'}
               </p>
-              <h2 className="font-display font-semibold text-[#10243B] leading-tight text-xl sm:text-[clamp(1.05rem,2.15vw,1.95rem)] sm:whitespace-nowrap">
+              <h2 className="font-display font-semibold text-[#10243B] leading-tight text-xl sm:text-2xl lg:text-[clamp(1.4rem,2.15vw,1.95rem)] lg:whitespace-nowrap">
                 {s.discoverHeading || 'Curated Landmarks Across the UAE, Europe & Global Escapes'}
               </h2>
             </div>
@@ -560,7 +560,7 @@ export function HomePage() {
                   />
                   <span
                     aria-hidden="true"
-                    className="absolute bottom-2.5 right-2.5 w-8 h-8 rounded-lg bg-[#10243B]/85 text-[#FF5252] shadow-sm flex items-center justify-center opacity-85 group-hover:opacity-100 transition-opacity"
+                    className="absolute bottom-2.5 right-2.5 w-8 h-8 rounded-lg bg-[#091524]/90 border border-[#F59E0B]/40 text-[#F59E0B] shadow-md flex items-center justify-center opacity-95 group-hover:opacity-100 transition-opacity"
                   >
                     <Maximize2 className="w-3.5 h-3.5" />
                   </span>
@@ -748,7 +748,7 @@ export function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-[#DC2626]">
               {s.packagesEyebrow || 'Featured Travel Packages'}
             </p>
-            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-[clamp(1.1rem,2.3vw,2.15rem)] sm:whitespace-nowrap">
+            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-2xl lg:text-[clamp(1.45rem,2.3vw,2.15rem)] lg:whitespace-nowrap">
               {s.packagesHeading || 'Tailored Package Concepts Ready for Custom Quotation'}
             </h2>
             <div className="pt-1">
@@ -813,7 +813,7 @@ export function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-[#DC2626]">
               {s.howItWorksEyebrow || 'How Our Services Work'}
             </p>
-            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-[clamp(1.2rem,2.6vw,2.25rem)] sm:whitespace-nowrap">
+            <h2 className="font-display font-semibold text-[#10243B] text-xl sm:text-2xl lg:text-[clamp(1.5rem,2.6vw,2.25rem)] lg:whitespace-nowrap">
               {s.howItWorksHeading || 'Four Clear Steps From Enquiry to Arrival'}
             </h2>
           </div>

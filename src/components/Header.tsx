@@ -146,7 +146,7 @@ export function Header() {
         {/* Brand Logo & Wordmark */}
         <Link
           to="/"
-          className="flex items-center gap-2.5 min-w-0 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5252] rounded-lg"
+          className="flex items-center gap-2.5 flex-1 min-w-0 xl:flex-initial focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5252] rounded-lg"
         >
           <BrandMark
             logoUrl={s.logoUrl}
@@ -157,7 +157,7 @@ export function Header() {
             <span className="font-display text-sm sm:text-base font-semibold tracking-tight text-white whitespace-nowrap truncate">
               {s.shortName || 'Oasis Travel & Tourism'}
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#FF5252] mt-0.5 whitespace-nowrap">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#FF5252] mt-0.5 whitespace-nowrap truncate">
               {s.logoSubtitle || 'Dubai Consultancy'}
             </span>
           </span>

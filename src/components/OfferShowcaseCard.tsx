@@ -74,7 +74,7 @@ export function OfferShowcaseCard({ offer, whatsappNumber = '971525509694', onEn
           )}
 
           {offer.badge && (
-            <span className="absolute top-3 left-3 inline-flex items-center px-2.5 py-1 rounded-md bg-[#10243B]/90 text-[#FF5252] text-[11px] font-semibold tracking-wide shadow-sm">
+            <span className="absolute top-3 left-3 inline-flex items-center px-2.5 py-1 rounded-md bg-[#091524]/92 border border-[#F59E0B]/45 text-[#F59E0B] text-[11px] font-bold tracking-wide shadow-md [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
               {offer.badge}
             </span>
           )}

@@ -101,12 +101,12 @@ export function SafeImage({ src, alt, className = '', fallbackTitle }: SafeImage
   if (failed || !resolvedSrc) {
     return (
       <div
-        className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#10243B] via-[#193B59] to-[#234B6E] text-[#FAF8F3] p-6 text-center ${className}`}
+        className={`flex flex-col items-center justify-center bg-gradient-to-br from-[#0B192B] via-[#10243B] to-[#193B59] text-[#F59E0B] p-6 text-center ${className}`}
         role="img"
         aria-label={alt}
       >
-        <Compass className="w-8 h-8 text-[#FF5252] mb-2 opacity-80" strokeWidth={1.5} />
-        <span className="font-display text-sm font-medium text-[#FAF8F3]">
+        <Compass className="w-8 h-8 text-[#F59E0B] mb-2" strokeWidth={1.75} />
+        <span className="font-display text-sm font-bold text-[#F59E0B] [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
           {fallbackTitle || alt}
         </span>
       </div>

@@ -45,27 +45,27 @@ export function DestinationsPage() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(201,164,92,0.14),transparent_58%)]"
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#FF5252]">
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-white">
             <span className="w-8 h-[1px] bg-[#C9A45C]" aria-hidden="true" />
             <span>Destinations &amp; Attractions</span>
           </div>
 
           <h1 className="font-display font-bold tracking-tight leading-[1.15]">
-            <span className="block text-2xl sm:text-[clamp(1.3rem,3.1vw,2.75rem)] sm:whitespace-nowrap text-white">
+            <span className="block text-2xl sm:text-3xl lg:text-[clamp(1.75rem,3.1vw,2.75rem)] lg:whitespace-nowrap text-white">
               From Iconic Dubai Landmarks to Europe
             </span>
-            <span className="block mt-1 text-2xl sm:text-[clamp(1.3rem,3.1vw,2.75rem)] text-[#FF5252]">
+            <span className="block mt-1 text-2xl sm:text-3xl lg:text-[clamp(1.75rem,3.1vw,2.75rem)] text-white">
               &amp; Island Escapes
             </span>
           </h1>
 
           <div className="w-20 h-[2px] bg-[#C9A45C]" aria-hidden="true" />
 
-          <p className="text-base md:text-[clamp(0.85rem,1.25vw,1rem)] text-[#FAF8F3]/85 leading-relaxed">
+          <p className="text-base md:text-[clamp(0.85rem,1.25vw,1rem)] text-white leading-relaxed">
             <span className="md:block">
               Browse curated UAE attractions alongside sought-after international destinations in Europe, Turkey, the Indian Ocean, and Africa.
             </span>{' '}
-            <span className="md:block text-[#FF5252] font-medium mt-1">
+            <span className="md:block text-white font-medium mt-1">
               Click any destination photograph to view it in full.
             </span>
           </p>
@@ -114,11 +114,11 @@ export function DestinationsPage() {
                       isSelected ? 'bg-[#193B59]' : 'hover:bg-[#193B59]/80'
                     }`}
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#FF5252] tabular-nums">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white tabular-nums">
                       {item.num} · {regionCounts[item.key] || '—'}
                     </p>
                     <p className="text-xs sm:text-sm font-medium text-white leading-snug">{item.key}</p>
-                    <p className="text-[11px] text-[#FAF8F3]/70 leading-snug">{item.subtitle}</p>
+                    <p className="text-[11px] text-white leading-snug">{item.subtitle}</p>
                   </button>
                 );
               })}
@@ -182,13 +182,13 @@ export function DestinationsPage() {
                           alt={`${dest.name} in ${dest.country}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#10243B]/65 via-transparent to-transparent" />
-                        <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-[#10243B]/90 text-[#FF5252] text-[11px] font-semibold uppercase tracking-wider shadow-xs">
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#091524]/85 via-transparent to-transparent" />
+                        <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-[#091524]/92 border border-[#F59E0B]/45 text-[#F59E0B] text-[11px] font-bold uppercase tracking-wider shadow-md [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
                           {dest.region}
                         </span>
                         <span
                           aria-hidden="true"
-                          className="absolute bottom-3 right-3 w-9 h-9 rounded-lg bg-[#10243B]/85 text-[#FF5252] shadow-xs flex items-center justify-center opacity-85 group-hover:opacity-100 transition-opacity"
+                          className="absolute bottom-3 right-3 w-9 h-9 rounded-lg bg-[#091524]/90 border border-[#F59E0B]/40 text-[#F59E0B] shadow-md flex items-center justify-center opacity-95 group-hover:opacity-100 transition-opacity"
                         >
                           <Maximize2 className="w-4 h-4" />
                         </span>
